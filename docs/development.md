@@ -45,6 +45,58 @@ gh api -X POST repos/highemerly/hosteka/rulesets --input .github/rulesets/main.j
 gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/main.json
 ```
 
+## 依存更新（Renovate）
+
+依存は Renovate（GitHub App）が出す PR で上げる。設定は [.github/renovate.json5](../.github/renovate.json5)（各ルールの理由はコメント）。
+
+- **毎週月曜・木曜の 9時前（JST）** にまとめて PR が来る（lockfile の一括更新は月曜のみ）。自動マージはしない
+- **メジャーは承認制。** PR は自動では来ず、Issue「Dependency Dashboard」の Pending Approval に並ぶ
+  （見送っている理由: eslint 10 は eslint-config-next が使う eslint-plugin-react が未対応、TypeScript 7 は
+  typescript-eslint と next typegen の追従待ち）
+- Node のメジャーは Dockerfile・CI（setup-node）・`.nvmrc`・`.tool-versions`・`@types/node` が1つの PR にまとまる。
+  `@types/node` だけ先に上げると、本番の Node に無い API が typecheck を通ってしまう。`engines` はそのとき手で直す
+- まとめて上げるもの: prisma 一式（CLI と client・adapter は同じ版でないと動かない）、react と型定義、next と eslint-config-next
+- `node:24-alpine` は digest で固定する。Alpine や Node のパッチは digest 更新の PR として来る
+- 対象外: `docker-compose.yml` / `docker-compose.override.yml` / `e2e/compose.yml`
+  （DB は本番の共有 Postgres に合わせて手で上げる。app は非公開のレジストリで版を引けない）
+
+### PR が来たら
+
+1. CI（`ci-result`）が緑か見る。赤なら ruleset でマージできない。依存の更新では checks と e2e が両方走る
+2. lockfile の差分を見て、実際に入る版が変わるかを確かめる。PR 本文の変更履歴（Renovate が載せる）を読む
+3. 種類に応じて確認を足す。**CI が見ているのは unit・lint・型と、E2E スモーク（本番イメージがビルド・起動でき、
+   主要なページと未ログインの API が空の DB で応答するか）まで。ログイン（OAuth）と SNS への投稿は見ていない**:
+
+   | 種類 | 例 | マージ前の確認 |
+   |---|---|---|
+   | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom | CI 緑ならマージ |
+   | テストが本物を通るもの | jose（JWT）・ics（カレンダー）・zod・react-markdown / rehype-* | CI 緑ならマージ |
+   | ビルドと表示 | next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・`node:24-alpine` の digest | E2E 緑で本番ビルド・起動・主要ページまでは確認済み。見た目と操作は手元で |
+   | DB | prisma 一式 | ユニットテストはモック。E2E が空の DB に SQL を当てて API が応答するところまで。書き込みは手元で |
+   | 0.x のもの | class-variance-authority・@tailwindcss/typography・server-only | 0.x はマイナーでも互換を崩すことが多いのに Renovate はメジャー扱いしない。変更履歴を読む |
+   | ログイン・投稿に関わるもの | cookies-next | CI では確かめられない。手元でログインして確かめる |
+   | タグ時にしか動かない Actions | docker/login-action・docker/metadata-action・peter-evans/create-pull-request | PR の CI では動かない。次のリリースの docker-build.yml で初めて動く |
+4. squash マージする
+5. 手元で入れ直す（`npm ci` は生成済みの Prisma クライアントごと node_modules を消すので generate も要る）:
+   ```bash
+   git switch main && git pull
+   npm ci
+   npx prisma generate
+   ```
+   `.tool-versions` の node が上がったときは `asdf install` も行う
+
+### 承認待ち（メジャー）の片付け方
+
+- 着手するときに Dashboard のチェックを入れる → PR が作られる。一度に多く承認せず1つずつ
+- CI が落ちたら、その Renovate のブランチ（`renovate/...`）に直接コミットを足して直す。人のコミットが入った
+  ブランチは Renovate が以後書き換えない
+
+### その他
+
+- 今は要らない更新: PR を閉じる（その版は作り直されない。次の版が出れば再び PR になる）。恒久的に止めるなら renovate.json5 にルールを足す
+- 急ぐ更新（セキュリティ修正など）: Dashboard の Awaiting Schedule でチェックを入れると、スケジュールを待たずに PR が作られる
+- 手元で `npm update` はしない（Renovate の PR とぶつかる）。依存の追加はブランチを切って PR で
+
 ## コマンド
 
 | コマンド | 内容 |
