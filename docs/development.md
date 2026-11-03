@@ -64,17 +64,17 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 1. CI（`ci-result`）が緑か見る。赤なら ruleset でマージできない。依存の更新では checks と e2e が両方走る
 2. lockfile の差分を見て、実際に入る版が変わるかを確かめる。PR 本文の変更履歴（Renovate が載せる）を読む
-3. 種類に応じて確認を足す。**CI が見ているのは unit・lint・型と、E2E スモーク（本番イメージがビルド・起動でき、
-   主要なページと未ログインの API が空の DB で応答するか）まで。ログイン（OAuth）と SNS への投稿は見ていない**:
+3. 種類に応じて確認を足す。**CI が見ているのは unit・lint・型と、E2E（本番イメージで主要なページが開けるか、
+   Mastodon / Misskey のログインと投稿が偽サーバー相手に通るか）まで。Discord と X のログイン、見た目と操作は見ていない**:
 
    | 種類 | 例 | マージ前の確認 |
    |---|---|---|
-   | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom | CI 緑ならマージ |
+   | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom・@playwright/test | CI 緑ならマージ |
    | テストが本物を通るもの | jose（JWT）・ics（カレンダー）・zod・react-markdown / rehype-* | CI 緑ならマージ |
    | ビルドと表示 | next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・`node:24-alpine` の digest | E2E 緑で本番ビルド・起動・主要ページまでは確認済み。見た目と操作は手元で |
    | DB | prisma 一式 | ユニットテストはモック。E2E が空の DB に SQL を当てて API が応答するところまで。書き込みは手元で |
    | 0.x のもの | class-variance-authority・@tailwindcss/typography・server-only | 0.x はマイナーでも互換を崩すことが多いのに Renovate はメジャー扱いしない。変更履歴を読む |
-   | ログイン・投稿に関わるもの | cookies-next | CI では確かめられない。手元でログインして確かめる |
+   | ログイン・投稿に関わるもの | cookies-next | E2E 緑で Mastodon / Misskey のログインと投稿までは確認済み。Discord・X は手元で |
    | タグ時にしか動かない Actions | docker/login-action・docker/metadata-action・peter-evans/create-pull-request | PR の CI では動かない。次のリリースの docker-build.yml で初めて動く |
 4. squash マージする
 5. 手元で入れ直す（`npm ci` は生成済みの Prisma クライアントごと node_modules を消すので generate も要る）:
@@ -134,24 +134,39 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
   ブランチで省いた検査で壊れていた場合は、ここで止まる
 - イメージのビルドは、タグのビルドがレジストリに積む `buildcache` をブランチの E2E も読む
 
-## E2E スモーク
+## E2E
 
-ブランチで、本番と同じイメージをビルドして起動し、外から叩く
-（[e2e.yml](../.github/workflows/e2e.yml)。イメージは push しない）。見るのは
-ユニットテストに見えないものだけ: 主要なページと API が 200 を返すこと、
-マイグレーションを当てた空の DB で API が応答すること、キャッシュのヘッダ。
-画面の操作とリトライは入れない。中身は [e2e/smoke.mjs](../e2e/smoke.mjs)。
+ブランチで、本番と同じイメージをビルドし、使い捨ての Postgres と偽 Fediverse サーバーと一緒に起動して
+Playwright を回す（[e2e.yml](../.github/workflows/e2e.yml)。イメージは push しない）。
+**画面の操作（クリック・入力）とリトライは入れない。** ブラウザではページが開けて JS の例外と CSP 違反が
+無いことだけを見て、それ以外は API を直接呼ぶ（ページ内の fetch）。
+
+| ファイル | 見ること |
+|---|---|
+| [smoke.spec.ts](../e2e/smoke.spec.ts) | 未ログインの主要なページが開けて JS の例外が出ない、API が空の DB で応答する、キャッシュのヘッダ |
+| [visibility.spec.ts](../e2e/visibility.spec.ts) | 非公開のイベント・日程調整は、未ログインには API も画面も head（題名・説明・OGP）も出ない |
+| [fediverse.spec.ts](../e2e/fediverse.spec.ts) | 偽の Mastodon / Misskey 相手に、ログイン・権限の頼み方・前のトークンの失効（Misskey）・投稿・予約投稿・権限不足の返し方。ログイン後の主要なページ |
+
+- **偽 Fediverse サーバー**（[e2e/fakeverse/server.mjs](../e2e/fakeverse/server.mjs)）: 標準ライブラリだけで書き、
+  受けたリクエストを記録する。テストは管理用の口（:58080）から取り出して、本物のクライアントが送るものと同じものが
+  届いたかを見る。TEST-NET（198.51.100.0/24）に置く（外向きの通信のガードはプライベートアドレスを断るが、TEST-NET は通す）。
+  証明書は毎回 [gen-certs.sh](../e2e/fakeverse/gen-certs.sh) が作り、アプリは `NODE_EXTRA_CA_CERTS` で信頼する
+- ログインは認可画面を通さず、認可 URL からコールバックの URL を組み立てて開く。Cookie は Secure 付きなので
+  ブラウザに任せる（localhost を安全な接続として扱うのはブラウザだけ）
+- **Discord と X は確かめていない。** 宛先が固定（discord.com・api.x.com）で、偽サーバーに向けるには本番の
+  コードに抜け道が要るため
+- マイグレーションは SQL を psql で流す（本番イメージは Prisma の CLI を積まない）
+- E2E の結果も `ci-result` に入る（＝落ちたらマージできない）
 
 手元でも同じ手順で動く:
 ```bash
+npx playwright install chromium     # 初回だけ
+e2e/fakeverse/gen-certs.sh
 docker compose -f e2e/compose.yml up -d --build --wait
 docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
-node e2e/smoke.mjs
+npx playwright test -c e2e/playwright.config.ts
 docker compose -f e2e/compose.yml down -v
 ```
-
-マイグレーションは SQL を psql で流す（本番イメージは Prisma の CLI を積まない）。
-E2E の結果も `ci-result` に入る（＝落ちたらマージできない）。
 
 ## リリース
 

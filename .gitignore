@@ -50,3 +50,8 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# E2E（Playwright の出力と、毎回作る偽サーバーの証明書）
+/e2e/test-results/
+/e2e/playwright-report/
+/e2e/fakeverse/certs/
