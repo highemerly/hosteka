@@ -33,10 +33,11 @@ npm run dev                # http://localhost:3000
 |---|---|---|
 | PR 必須 | 承認数 0 | 一人運用で、自分の PR は自分で承認できないため |
 | マージ方式 | squash のみ＋linear history | 「1変更＝1コミット」の履歴を保つ |
-| 必須チェック | `checks / check` | ブランチへの push で [ci.yml](../.github/workflows/ci.yml) が付ける。paths で絞らない（スキップされると結果が付かず、マージできなくなる） |
+| 必須チェック | `ci-result`（checks / e2e のうち走ったものの結果をまとめたもの） | ブランチへの push で [ci.yml](../.github/workflows/ci.yml) が付ける。ジョブは差分で間引く（下の「CI」）ので、個別に必須にするとスキップされたジョブに結果が付かずマージできなくなる |
 | 最新化の強制 | しない（strict=false） | Renovate の PR が並んだとき、1件マージするたびに全件を rebase・再 CI させないため |
 | force push・削除 | 禁止 | |
 | バイパス | なし（管理者も対象） | |
+| 作者の紐づかないコミットの追加承認 | 求めない | 省略すると true が入り、アカウントに紐づかない作者のコミットがあると自分で承認できずマージできなくなる |
 
 ruleset を変えたら JSON を直して反映する（作成時は POST、以降は `gh api repos/highemerly/hosteka/rulesets` で id を引いて PUT）:
 ```bash
@@ -60,9 +61,30 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 **変更後は `npm test` / `npm run lint` / `npm run typecheck` の3つを通すこと。** これが CI のゲートと同一。
 
+## CI
+
+[ci.yml](../.github/workflows/ci.yml) が main 以外のブランチへの push で、**差分が影響しうるジョブだけ**を回す。
+判定は [ci-targets.sh](../.github/scripts/ci-targets.sh)（main との merge-base からの差分ファイルで決める。
+`.github/scripts/ci-targets.sh <ブランチ名>` で手元でも試せる）。
+
+| 変更 | checks（vitest / eslint / tsc） | e2e |
+|---|---|---|
+| `src/**`・依存（package.json・lockfile）・Dockerfile・next.config・prisma など、下に無いもの全部 | ✓ | ✓ |
+| `e2e/**` | ✓ | ✓ |
+| ワークフロー（checks.yml / e2e.yml） | そのワークフローのジョブだけ | 同左 |
+| ドキュメント（`*.md`・`docs/**`）・`.claude/**`・`.githooks/**`・ruleset・Renovate 設定・LICENSE・docker-build.yml | – | – |
+| `release/*` ブランチ（バージョンの bump だけ） | – | – |
+
+- 結果は `ci-result` に集まる（main の必須チェックはこれだけ）。成功とスキップは通し、失敗とキャンセルは落とす
+- **main への push では回さない。** マージ前に同じ中身をブランチで通しているため
+- **タグ push（リリース）では全部回す。** [docker-build.yml](../.github/workflows/docker-build.yml) が
+  checks をビルドと並べて回し、E2E は push したイメージそのもので回す。全部が緑のときだけデプロイの PR を出す。
+  ブランチで省いた検査で壊れていた場合は、ここで止まる
+- イメージのビルドは、タグのビルドがレジストリに積む `buildcache` をブランチの E2E も読む
+
 ## E2E スモーク
 
-PR（全ブランチへの push）で、本番と同じイメージをビルドして起動し、外から叩く
+ブランチで、本番と同じイメージをビルドして起動し、外から叩く
 （[e2e.yml](../.github/workflows/e2e.yml)。イメージは push しない）。見るのは
 ユニットテストに見えないものだけ: 主要なページと API が 200 を返すこと、
 マイグレーションを当てた空の DB で API が応答すること、キャッシュのヘッダ。
@@ -77,7 +99,7 @@ docker compose -f e2e/compose.yml down -v
 ```
 
 マイグレーションは SQL を psql で流す（本番イメージは Prisma の CLI を積まない）。
-必須チェックにはしていない（所要時間と安定性を見てから決める）。
+E2E の結果も `ci-result` に入る（＝落ちたらマージできない）。
 
 ## リリース
 

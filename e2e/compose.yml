@@ -7,6 +7,7 @@
 #   docker compose -f e2e/compose.yml down -v
 #
 # CI はイメージを先に作って読み込ませ（hosteka:e2e）、--build を付けずに起動する。
+# タグ時は push 済みのイメージを E2E_IMAGE で渡す。
 name: hosteka-e2e
 
 services:
@@ -32,7 +33,7 @@ services:
       - ./migrate.sh:/migrate.sh:ro
 
   app:
-    image: hosteka:e2e
+    image: ${E2E_IMAGE:-hosteka:e2e}
     build:
       context: ..
       dockerfile: Dockerfile
