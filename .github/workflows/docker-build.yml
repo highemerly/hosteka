@@ -58,13 +58,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 入力は `${{ }}` で run: に直接埋めない（シェルの文字列として解釈され、
+      # 値に `"` や `$(...)` があればそのまま実行される）。環境変数で渡す
       - name: Extract version
         id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "version=$INPUT_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check for migration changes
@@ -127,9 +132,11 @@ jobs:
           path: k8s-repo
 
       - name: Update image tag
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           cd k8s-repo
-          sed -i "s|image: ghcr.io/highemerly/hosteka:.*|image: ghcr.io/highemerly/hosteka:${{ needs.build.outputs.version }}|" ${{ env.K8S_MANIFEST_PATH }}
+          sed -i "s|image: ghcr.io/highemerly/hosteka:.*|image: ghcr.io/highemerly/hosteka:${VERSION}|" "$K8S_MANIFEST_PATH"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -148,7 +155,9 @@ jobs:
 
             ${{ needs.build.outputs.has_migration == 'true' && '### マイグレーション実行手順' || '' }}
             ${{ needs.build.outputs.has_migration == 'true' && '```bash' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && 'kubectl apply -f manifests/hosteka/prd/migration-job.yaml' || '' }}
+            ${{ needs.build.outputs.has_migration == 'true' && 'kubectl port-forward -n shared-postgres-prd svc/postgres-rw 15432:5432' || '' }}
+            ${{ needs.build.outputs.has_migration == 'true' && 'DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npx prisma migrate status' || '' }}
+            ${{ needs.build.outputs.has_migration == 'true' && 'DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npm run deploy:migrate' || '' }}
             ${{ needs.build.outputs.has_migration == 'true' && '```' || '' }}
 
             ---
