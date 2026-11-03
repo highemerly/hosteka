@@ -152,39 +152,29 @@ export async function createPreEvent(page: Page, fields: { title: string; descri
 }
 
 /**
- * 自分の API（`/api/`）への問い合わせが無くなって、少し経つまで待つ。
- * `networkidle` は使わない — 開いたままの通信があるページでは来ない。
+ * 自分の API（`/api/`）への出入りが、しばらく止まるまで待つ。
+ *
+ * `networkidle` は使わない — 開いたままの通信があるページでは来ない。進行中の件数を
+ * 数える形も使わない — 中断された問い合わせなどで数がずれ、終わらなくなる（CI で起きた）。
+ * ここで見たいのは JS の例外で、通信が全部終わったかではないので、上限を過ぎたら先へ進む。
  */
-export async function waitForApiIdle(page: Page, { quietMs = 500, timeoutMs = 15_000 } = {}) {
-  let inflight = 0
-  let lastChange = Date.now()
-  const isApi = (url: string) => new URL(url).pathname.startsWith('/api/')
-  const start = (r: { url(): string }) => {
-    if (isApi(r.url())) {
-      inflight++
-      lastChange = Date.now()
-    }
+export async function waitForApiIdle(page: Page, { quietMs = 500, maxMs = 10_000 } = {}) {
+  let lastActivity = Date.now()
+  const touch = (r: { url(): string }) => {
+    if (new URL(r.url()).pathname.startsWith('/api/')) lastActivity = Date.now()
   }
-  const end = (r: { url(): string }) => {
-    if (isApi(r.url())) {
-      inflight = Math.max(0, inflight - 1)
-      lastChange = Date.now()
-    }
-  }
-  page.on('request', start)
-  page.on('requestfinished', end)
-  page.on('requestfailed', end)
+  page.on('request', touch)
+  page.on('requestfinished', touch)
+  page.on('requestfailed', touch)
   try {
-    const deadline = Date.now() + timeoutMs
-    while (Date.now() < deadline) {
-      if (inflight === 0 && Date.now() - lastChange >= quietMs) return
+    const deadline = Date.now() + maxMs
+    while (Date.now() < deadline && Date.now() - lastActivity < quietMs) {
       await page.waitForTimeout(100)
     }
-    throw new Error(`${page.url()} で API の問い合わせが終わらない（${inflight} 件）`)
   } finally {
-    page.off('request', start)
-    page.off('requestfinished', end)
-    page.off('requestfailed', end)
+    page.off('request', touch)
+    page.off('requestfinished', touch)
+    page.off('requestfailed', touch)
   }
 }
 
