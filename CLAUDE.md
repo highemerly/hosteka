@@ -188,8 +188,9 @@ PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-c
 
 CI ワークフロー:
 - `.github/workflows/checks.yml` — **ゲートの単一の定義元**（vitest → eslint → tsc）。`workflow_call` 専用。ここ以外にゲートを書かない
-- `.github/workflows/ci.yml` — 全ブランチ push で `checks.yml` を実行
-- `.github/workflows/docker-build.yml` — `v*` タグ push で `checks` とビルドを並列実行し、**両方緑のときだけ** GitOps PR を作成する
+- `.github/workflows/e2e.yml` — 本番と同じイメージをビルドして起動し、主要なページと API を外から叩くスモーク（`e2e/`。画面の操作はしない）
+- `.github/workflows/ci.yml` — main 以外のブランチへの push で、差分が影響しうるジョブだけを実行（判定は `.github/scripts/ci-targets.sh`）。結果は `ci-result` に集まり、main の必須チェックはこれだけ
+- `.github/workflows/docker-build.yml` — `v*` タグ push で `checks` とビルドを並列に回し、push したイメージで `e2e` も回す。**全部緑のときだけ** GitOps PR を作成する
 
 ## 保存期間（重要）
 

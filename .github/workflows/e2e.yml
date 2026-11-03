@@ -1,0 +1,63 @@
+name: E2E
+
+# 本番と同じイメージを起動して外から叩くスモーク。ci.yml（ブランチ push・差分で必要なときだけ。
+# イメージはここでビルドし、push しない）と docker-build.yml（タグ push・push 済みのイメージで）から呼ぶ。
+# 手順は手元でも同じ（e2e/compose.yml の冒頭）。
+on:
+  workflow_call:
+    inputs:
+      # 指定するとビルドせず、このイメージ（push 済み）で回す。タグ時に、デプロイするイメージ
+      # そのものを確かめるため（作り直したイメージで通っても、本番に出すものの確認にならない）。
+      image:
+        type: string
+        default: ''
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # GHCR のパッケージは非公開。push 済みのイメージと buildcache を読むのに要る
+      packages: read
+    env:
+      # e2e/compose.yml の app が使うイメージ
+      E2E_IMAGE: ${{ inputs.image || 'hosteka:e2e' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: ${{ !inputs.image }}
+        uses: docker/setup-buildx-action@v3
+
+      # タグ時のビルド（docker-build.yml）が積む buildcache を読む。lockfile が同じなら
+      # 依存のインストールは飛ばされ、実質 next build だけになる。
+      - name: Build production image (no push)
+        if: ${{ !inputs.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: hosteka:e2e
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+
+      - name: Start app and database
+        run: docker compose -f e2e/compose.yml up -d --wait
+
+      - name: Apply migrations
+        run: docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
+
+      - name: Smoke
+        run: node e2e/smoke.mjs
+
+      - name: Show app logs
+        if: failure()
+        run: docker compose -f e2e/compose.yml logs app

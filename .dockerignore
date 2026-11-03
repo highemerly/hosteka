@@ -50,6 +50,9 @@ docker-compose*.yml
 # Scripts
 scripts/
 
+# E2E（イメージの外から叩く側）
+e2e/
+
 # Documentation
 *.md
 docs/

@@ -1,0 +1,55 @@
+# E2E スモーク用。本番と同じイメージを、使い捨ての Postgres と一緒に起動する。
+# CI でも手元でも同じ手順で動かす（docs/development.md「E2E スモーク」）。
+#
+#   docker compose -f e2e/compose.yml up -d --build --wait
+#   docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
+#   node e2e/smoke.mjs
+#   docker compose -f e2e/compose.yml down -v
+#
+# CI はイメージを先に作って読み込ませ（hosteka:e2e）、--build を付けずに起動する。
+# タグ時は push 済みのイメージを E2E_IMAGE で渡す。
+name: hosteka-e2e
+
+services:
+  postgres:
+    # 本番の共有 Postgres（k8sg1）に合わせて手で上げる
+    image: postgres:16
+    command: postgres -c timezone=UTC
+    environment:
+      POSTGRES_DB: hosteka
+      POSTGRES_USER: hosteka
+      POSTGRES_PASSWORD: hosteka
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hosteka -d hosteka']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    # データは残さない（毎回まっさらな DB で確かめる）
+    tmpfs:
+      - /var/lib/postgresql/data
+    # マイグレーションは SQL を psql で順に流す。本番イメージは Prisma の CLI を積まない
+    volumes:
+      - ../prisma/migrations:/migrations:ro
+      - ./migrate.sh:/migrate.sh:ro
+
+  app:
+    image: ${E2E_IMAGE:-hosteka:e2e}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: 'postgresql://hosteka:hosteka@postgres:5432/hosteka'
+      NEXTAUTH_URL: 'http://localhost:3000'
+      NEXTAUTH_SECRET: 'e2e-secret-e2e-secret-e2e-secret-e2e'
+      CRON_SECRET: 'e2e-cron-secret'
+    ports:
+      - '3000:3000'
+    healthcheck:
+      # Alpine では localhost が ::1 に解決され、0.0.0.0 で待つサーバーに届かない
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3000/api/health']
+      interval: 2s
+      timeout: 5s
+      retries: 60

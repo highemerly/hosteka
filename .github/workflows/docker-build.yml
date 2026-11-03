@@ -18,9 +18,19 @@ env:
   K8S_MANIFEST_PATH: manifests/hosteka/prd/web.yaml
 
 jobs:
-  # ci.yml と同じゲート。build と並列に走り、両方が緑のときだけ create-k8s-pr が動く。
+  # ブランチでは差分で間引いた検査を、リリースでは全部回す。checks は build と並列に走り、
+  # e2e は push したイメージそのもので回す。全部が緑のときだけ create-k8s-pr が動く。
   checks:
     uses: ./.github/workflows/checks.yml
+
+  e2e:
+    needs: build
+    uses: ./.github/workflows/e2e.yml
+    permissions:
+      contents: read
+      packages: read
+    with:
+      image: ${{ needs.build.outputs.image }}
 
   build:
     runs-on: ubuntu-latest
@@ -30,6 +40,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       has_migration: ${{ steps.migration.outputs.has_migration }}
+      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout repository
@@ -93,14 +104,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # ブランチの E2E（e2e.yml）も同じ buildcache を読む。GitHub Actions のキャッシュ（type=gha）は
+          # タグの実行で積んだものをブランチから読めないので、レジストリに置く
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
 
   create-k8s-pr:
-    # ビルドと CI が両方成功したときだけ k8s マニフェストへ PR する。
+    # ビルド・checks・E2E（push したイメージで）が全部成功したときだけ k8s マニフェストへ PR する。
     # イメージ自体はテスト結果に関わらず GHCR へ push されるが、
     # デプロイのトリガである GitOps PR はテストが緑でなければ開かない。
-    needs: [build, checks]
+    needs: [build, checks, e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: read
