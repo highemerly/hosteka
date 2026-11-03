@@ -1,0 +1,65 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  // docker:pinDigests: node:24-alpine を digest で固定する。タグのままだと Alpine や Node の更新が
+  // リリース時のビルドで無言で入る。固定すると digest の更新が PR になり、E2E を通してから取り込める。
+  extends: ['config:recommended', 'docker:pinDigests'],
+  timezone: 'Asia/Tokyo',
+  // 週2回にまとめる（毎日 PR が来ると確認が追いつかず、週1だと間隔が空きすぎる）。
+  schedule: ['before 9am on monday and thursday'],
+  labels: ['dependencies'],
+  // 間接依存（lockfile だけにある版）も週1で更新する。
+  lockFileMaintenance: {
+    enabled: true,
+  },
+  // メジャーはコード側の対応が要るので、着手するときに Dependency Dashboard で承認して PR を作らせる
+  // （自動で並ぶと、対応できないまま毎週 rebase される PR が溜まる）。
+  // 見送っているもの: eslint 10（eslint-config-next が使う eslint-plugin-react が未対応で、ルールの
+  // 読み込みで落ちる）、TypeScript 7（Go 実装。typescript-eslint と next typegen の追従待ち）。
+  major: {
+    dependencyDashboardApproval: true,
+  },
+  packageRules: [
+    {
+      // package.json の範囲（^x.y.z）の下限も上げる。範囲内の更新でも PR になり、
+      // package.json を見れば実際に入っている版が分かる状態を保つ。
+      // npm に限る（Docker の node:24-alpine や setup-node の 24 まで 24.x.y に固定されるため）。
+      matchManagers: ['npm'],
+      rangeStrategy: 'bump',
+    },
+    {
+      // 乗っ取られて公開された版は数日以内に取り下げられることが多いため、公開から3日待つ。
+      matchDatasources: ['npm'],
+      minimumReleaseAge: '3 days',
+    },
+    {
+      // Node のメジャーは Dockerfile（node:24-alpine）・CI（setup-node）・.nvmrc・.tool-versions・
+      // @types/node を揃えて上げる必要があるため1つの PR にまとめる。@types/node だけ先に上げると、
+      // 本番の Node に無い API が typecheck を通ってしまう。
+      matchDepNames: ['node', 'nodejs', '@types/node'],
+      matchUpdateTypes: ['major'],
+      groupName: 'Node.js major',
+    },
+    {
+      // prisma CLI と @prisma/client・adapter は同じ版でないと動かないため1つの PR にする。
+      matchPackageNames: ['prisma', '@prisma/**'],
+      groupName: 'prisma',
+    },
+    {
+      // 型定義は本体と同じ PR で上げる（React のメジャー/マイナーで型だけずれるのを防ぐ）。
+      matchPackageNames: ['@types/react', '@types/react-dom'],
+      groupName: 'react monorepo',
+    },
+    {
+      // package.json の engines（node >=24）は動かす範囲の下限で、パッチのたびに上げる意味が無い。
+      // Node のメジャーを上げるときは、上の「Node.js major」と一緒に手で直す。
+      matchDepTypes: ['engines'],
+      enabled: false,
+    },
+    {
+      // 開発用・E2E 用の DB は本番の共有 Postgres（k8sg1）の版に合わせて手で上げる。
+      // docker-compose.yml の app は非公開のレジストリのイメージで、Renovate からは版を引けない。
+      matchFileNames: ['docker-compose.yml', 'docker-compose.override.yml', 'e2e/compose.yml'],
+      enabled: false,
+    },
+  ],
+}

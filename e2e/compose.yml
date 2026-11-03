@@ -12,8 +12,8 @@ name: hosteka-e2e
 
 services:
   postgres:
-    # 本番の共有 Postgres（k8sg1）に合わせて手で上げる
-    image: postgres:16
+    # 本番の共有 Postgres（k8sg1 の CNPG。postgresql:15）に合わせて手で上げる
+    image: postgres:15
     command: postgres -c timezone=UTC
     environment:
       POSTGRES_DB: hosteka
