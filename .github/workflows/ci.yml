@@ -28,7 +28,7 @@ jobs:
     steps:
       # main との merge-base を取るため履歴ごと取る（既定の depth=1 だと origin/main が無い）。
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
