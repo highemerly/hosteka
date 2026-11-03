@@ -67,15 +67,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# コンテナの中で `npx prisma migrate deploy` を打てるようにしておく
-# （マイグレーションは自動では走らない。手動の手順）。
-# Prisma 7 は Rust エンジンを積まないので node_modules/.prisma は無い。
-# アプリが使うクライアントは standalone 側に取り込まれている。
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# **Prisma の CLI は積まない。** マイグレーションは手元から port-forward して当てる
+# （docs/development.md「リリース」）。Prisma 7 の CLI は依存（effect など）を
+# 丸ごと要するので、積むならイメージが太る。アプリが使うクライアントは
+# standalone 側に取り込まれている。
 
 USER nextjs
 
