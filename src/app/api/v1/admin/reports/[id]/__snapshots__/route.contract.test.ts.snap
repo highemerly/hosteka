@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/admin/reports/[id] > 対象を kind 付きの target に畳み、主催者が主催している件数まで返す 1`] = `
+{
+  "body": {
+    "data": {
+      "adminNote": "確認中",
+      "id": "clreportxxxxxxxxxxxxxxxx1",
+      "reason": "スパムです",
+      "reportedAt": "2026-09-01T03:00:00.000Z",
+      "reporter": {
+        "avatar": null,
+        "displayName": "テスト太郎",
+        "id": "user_1",
+        "platform": "mastodon",
+        "server": "example.social",
+        "username": "taro",
+      },
+      "resolvedAt": null,
+      "status": "pending",
+      "target": {
+        "createdAt": "2026-08-30T01:00:00.000Z",
+        "creator": {
+          "avatar": null,
+          "displayName": "主催さん",
+          "id": "user_9",
+          "platform": "mastodon",
+          "server": "example.social",
+          "username": "host",
+        },
+        "creatorHosted": {
+          "events": 3,
+          "preEvents": 1,
+        },
+        "description": "本文",
+        "id": "evt_1",
+        "isDisabled": false,
+        "isPublic": true,
+        "kind": "event",
+        "organization": null,
+        "title": "怪しい交流会",
+      },
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

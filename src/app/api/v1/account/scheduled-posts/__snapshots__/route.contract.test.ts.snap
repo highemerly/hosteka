@@ -1,0 +1,89 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/account/scheduled-posts > Mastodon 以外はその旨を返す。エラーにしない（入り直しても直らない） 1`] = `
+{
+  "body": {
+    "data": {
+      "status": "not_mastodon",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/account/scheduled-posts > トークンが無ければ「権限が無い」を返す。入り直せば直ると画面が言える 1`] = `
+{
+  "body": {
+    "data": {
+      "server": "example.social",
+      "status": "no_write_permission",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/account/scheduled-posts > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/account/scheduled-posts > 画面が使う形だけに絞って返す 1`] = `
+{
+  "body": {
+    "data": {
+      "posts": [
+        {
+          "id": "1",
+          "mediaCount": 1,
+          "scheduledAt": "2026-09-20T10:00:00.000Z",
+          "text": "あしたの交流会のリマインドです",
+          "visibility": "unlisted",
+        },
+      ],
+      "server": "example.social",
+      "status": "ok",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/account/scheduled-posts > 相手が403でも同じ。トークンはあるが権限が足りない 1`] = `
+{
+  "body": {
+    "data": {
+      "server": "example.social",
+      "status": "no_write_permission",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/account/scheduled-posts > 相手が落ちているときは503。こちらの不具合ではない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "SERVICE_UNAVAILABLE",
+      "message": "example.social から予約投稿を取得できませんでした",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 503,
+}
+`;

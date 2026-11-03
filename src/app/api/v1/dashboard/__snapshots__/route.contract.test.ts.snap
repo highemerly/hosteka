@@ -1,0 +1,105 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/dashboard > アカウント・近いイベント・最近の日程調整をまとめて返す 1`] = `
+{
+  "body": {
+    "data": {
+      "account": {
+        "avatar": null,
+        "displayName": "テスト太郎",
+        "hasWritePermission": true,
+        "id": "user_1",
+        "platform": "mastodon",
+        "server": "example.social",
+        "username": "taro",
+      },
+      "recentPreEvents": [
+        {
+          "creator": {
+            "avatar": null,
+            "displayName": "テスト太郎",
+            "id": "user_1",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "taro",
+          },
+          "dateOptions": [
+            {
+              "endDate": null,
+              "id": "opt_1",
+              "startDate": "2026-10-01T10:00:00.000Z",
+            },
+          ],
+          "fee": null,
+          "id": "pre_1",
+          "location": null,
+          "organization": null,
+          "registrationDeadline": null,
+          "respondentCount": 0,
+          "respondents": [],
+          "title": "次の交流会の日程",
+        },
+      ],
+      "upcoming": [
+        {
+          "attendees": [],
+          "attendingCount": 3,
+          "creator": {
+            "avatar": null,
+            "displayName": "テスト太郎",
+            "id": "user_1",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "taro",
+          },
+          "endDate": null,
+          "fee": null,
+          "hasEndTime": false,
+          "hasStartTime": true,
+          "hashtags": [
+            "fediverse交流会",
+          ],
+          "id": "evt_1",
+          "location": "渋谷",
+          "maxParticipants": 40,
+          "organization": null,
+          "registrationDeadline": null,
+          "startDate": "2026-09-12T10:00:00.000Z",
+          "status": "active",
+          "title": "Fediverse 交流会",
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/dashboard > セッションはあるのにユーザーの行が無いときも401。退会直後の取り残しで500にしない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/dashboard > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;

@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/orgs/[orgId]/events > 居ないグループは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "グループが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/orgs/[orgId]/events > 未ログインでも一覧を返す（公開） 1`] = `
+{
+  "body": {
+    "data": [],
+    "meta": {
+      "page": 1,
+      "perPage": 20,
+      "total": 32,
+      "totalPages": 2,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

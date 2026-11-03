@@ -1,0 +1,50 @@
+name: Checks
+
+# vitest / eslint / tsc を回す再利用可能ワークフロー。
+# ci.yml（全ブランチ push）と docker-build.yml（タグ push でビルドと並走）の両方から呼ぶ。
+# CI ステップの単一の定義元。
+on:
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # postinstall をスキップして高速・決定的にする。
+      # テスト・lint・typecheck にネイティブビルドは不要。
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # 生成物（src/generated/prisma）は .gitignore 済みなので、ここで作る。
+      # PrismaClient / Prisma / 各モデル型はこの中にしか無く、テストにも tsc にも必須。
+      # DB接続は不要でスキーマを読むだけ。
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # API の契約書（openapi.json）のドリフト検査もこの中にある
+      # （src/server/openapi/openapi.drift.test.ts）。生成器はルートを import して
+      # 動かす必要があり、素の node では server-only と拡張子なしの相対 import が
+      # 解決できないため、専用ステップではなく vitest に相乗りさせている。
+      - name: Test (vitest)
+        run: npm test
+
+      # テストが落ちても lint / 型エラーを隠さない（1回の実行で全ての問題を出す）。
+      # always() ではなく !cancelled() なので手動キャンセルは即座に止まる。
+      - name: Lint (eslint)
+        if: ${{ !cancelled() }}
+        run: npm run lint
+
+      - name: Typecheck (tsc)
+        if: ${{ !cancelled() }}
+        run: npm run typecheck

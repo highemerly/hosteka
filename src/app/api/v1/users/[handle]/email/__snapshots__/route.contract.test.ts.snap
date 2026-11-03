@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/users/[handle]/email > ハンドルの形になっていなければ404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "ユーザーが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/users/[handle]/email > ログインしていればアドレスを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "email": "taro@example.test",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/users/[handle]/email > 居ない人は404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "ユーザーが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/users/[handle]/email > 未ログインでは401。DBも引かない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/users/[handle]/email > 未登録なら null を返す 1`] = `
+{
+  "body": {
+    "data": {
+      "email": null,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

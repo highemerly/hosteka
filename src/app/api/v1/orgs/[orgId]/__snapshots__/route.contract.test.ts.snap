@@ -1,0 +1,123 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DELETE /api/v1/orgs/[orgId] > 管理者でなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "グループの削除は管理者のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`DELETE /api/v1/orgs/[orgId] > 管理者なら削除できる 1`] = `
+{
+  "body": {
+    "data": {
+      "success": true,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/orgs/[orgId] > 存在しないグループは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "グループが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/orgs/[orgId] > 未ログインでも詳細を返す（公開） 1`] = `
+{
+  "body": {
+    "data": {
+      "admins": [
+        {
+          "id": "oa_1",
+          "role": "admin",
+          "user": {
+            "avatar": null,
+            "displayName": "テスト太郎",
+            "id": "user_1",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "taro",
+          },
+        },
+      ],
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "creator": {
+        "avatar": null,
+        "displayName": "テスト太郎",
+        "id": "user_1",
+        "platform": "mastodon",
+        "server": "example.social",
+        "username": "taro",
+      },
+      "creatorId": "user_1",
+      "description": null,
+      "id": "org_1",
+      "name": "テストグループ",
+      "relatedUrl": null,
+      "slug": "my-group",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`PUT /api/v1/orgs/[orgId] > スラッグ重複は409 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "CONFLICT",
+      "message": "このグループIDは既に使用されています",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 409,
+}
+`;
+
+exports[`PUT /api/v1/orgs/[orgId] > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`PUT /api/v1/orgs/[orgId] > 管理者でなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "グループの編集は管理者のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;

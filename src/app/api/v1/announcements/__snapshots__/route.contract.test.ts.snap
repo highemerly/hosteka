@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/announcements > 公開中のお知らせを新しい順に返す 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "body": "## 停止する時間",
+        "id": 1,
+        "pinnedUntil": "2026-06-30T00:00:00.000Z",
+        "publishedAt": "2026-06-14T00:00:00.000Z",
+        "title": "メンテナンスのお知らせ",
+        "type": "warning",
+      },
+      {
+        "body": null,
+        "id": 2,
+        "pinnedUntil": null,
+        "publishedAt": "2026-06-13T00:00:00.000Z",
+        "title": "表記をそろえました",
+        "type": "low",
+      },
+      {
+        "body": "本文",
+        "id": 3,
+        "pinnedUntil": null,
+        "publishedAt": "2026-01-01T00:00:00.000Z",
+        "title": "去年のお知らせ",
+        "type": "info",
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 100,
+      "total": 3,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

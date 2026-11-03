@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/pre-events/[id]/contact > 主催者でも回答者でもなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "この日程調整の回答者への連絡はできません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`GET /api/v1/pre-events/[id]/contact > 主催者は宛先と自分の投稿手段を受け取れる 1`] = `
+{
+  "body": {
+    "data": {
+      "preEvent": {
+        "id": "pre_1",
+        "registrationDeadline": null,
+        "title": "忘年会の日程",
+      },
+      "respondents": [
+        {
+          "avatar": null,
+          "displayName": "花子",
+          "id": "user_2",
+          "platform": "mastodon",
+          "server": "example.social",
+          "username": "hanako",
+        },
+      ],
+      "unreachableCount": 0,
+      "viewer": {
+        "canPostDirectly": true,
+        "mayPostDirectly": true,
+        "platform": "mastodon",
+        "server": "example.social",
+      },
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/pre-events/[id]/contact > 存在しない日程調整は404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "日程調整が見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/pre-events/[id]/contact > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;

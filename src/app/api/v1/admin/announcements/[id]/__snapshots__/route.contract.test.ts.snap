@@ -1,0 +1,30 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DELETE /api/v1/admin/announcements/[id] > 消せる 1`] = `
+{
+  "body": {
+    "data": {
+      "success": true,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`PUT /api/v1/admin/announcements/[id] > 直したものを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "body": "本文",
+      "id": 1,
+      "pinnedUntil": null,
+      "publishedAt": "2026-06-20T10:30:00.000Z",
+      "title": "直したお知らせ",
+      "type": "info",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

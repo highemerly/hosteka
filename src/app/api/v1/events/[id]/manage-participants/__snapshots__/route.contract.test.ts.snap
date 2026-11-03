@@ -1,0 +1,109 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/events/[id]/manage-participants > 主催者・幹事でなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "イベントの参加者の管理は主催者・幹事のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/manage-participants > 参加者と、選んだオプションのIDを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "event": {
+        "allowMaybe": true,
+        "allowParticipationRequest": true,
+        "id": "evt_1",
+        "status": "published",
+        "title": "交流会",
+      },
+      "optionGroups": [
+        {
+          "id": "g1",
+          "options": [
+            {
+              "id": "o1",
+              "maxParticipants": 10,
+              "name": "肉",
+              "takenCount": 1,
+            },
+          ],
+          "responseType": "single",
+          "title": "食事",
+        },
+        {
+          "id": "g2",
+          "options": [],
+          "responseType": "text",
+          "title": "どこで知りましたか",
+        },
+      ],
+      "participants": [
+        {
+          "comment": "よろしく",
+          "id": "p1",
+          "isCreator": false,
+          "isOrganizer": false,
+          "joinedAt": "2026-07-01T00:00:00.000Z",
+          "optionTextAnswers": {
+            "g2": "友人から",
+          },
+          "selectedOptionIds": [
+            "o1",
+          ],
+          "status": "attending",
+          "user": {
+            "avatar": null,
+            "displayName": "花子",
+            "id": "user_2",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "hanako",
+          },
+        },
+      ],
+      "viewer": {
+        "isCreator": true,
+      },
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/manage-participants > 存在しないイベントは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "イベントが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/manage-participants > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;

@@ -1,0 +1,232 @@
+import { Minus, Plus, RefreshCw, Wrench } from 'lucide-react'
+
+import { ContentPage } from '@/components/content/ContentPage'
+
+export const metadata = {
+  title: 'リリースノート - Hosteka (SNSコミュニティのためのイベントプラットフォーム)',
+  description: 'Hostekaの更新履歴とリリースノートをご覧いただけます。'
+}
+
+// ISRでキャッシュを有効化（5分間隔で更新）
+export const revalidate = 300
+
+type ChangeType = 'add' | 'fix' | 'remove' | 'change'
+
+type Change = {
+  type: ChangeType
+  text: string
+}
+
+type ReleaseNote = {
+  version: string
+  date: string
+  changes: Change[]
+}
+
+/*
+  変更の種別。**色で区別しない**（docs/DESIGN_GUIDELINES.md）。
+  以前は緑・青・赤・黄の4色で塗り分けていたが、これは分類であって
+  重要度ではない。4色を並べると、どれが重い変更なのかを色が
+  嘘で答えることになる。記号と語で区別する。
+*/
+const changeTypeConfig: Record<ChangeType, { label: string; icon: typeof Plus }> = {
+  add: { label: '追加', icon: Plus },
+  fix: { label: '修正', icon: Wrench },
+  remove: { label: '削除', icon: Minus },
+  change: { label: '変更', icon: RefreshCw },
+}
+
+const releaseNotes: ReleaseNote[] = [
+  {
+    version: '2.0',
+    date: '2026/9/29',
+    changes: [
+      { type: 'add', text: '通知機能を追加（参加しているイベントの変更・中止、参加リクエストの承認、日程調整への回答などをお知らせ）'},
+      { type: 'add', text: 'ユーザーページ（プロフィール）を追加'},
+      { type: 'add', text: 'アカウント設定ページを追加'},
+      { type: 'add', text: 'ログイン中の端末を一覧し、個別にログアウトできる機能を追加'},
+      { type: 'add', text: 'ダークモードに対応'},
+      { type: 'add', text: '運営からのお知らせを画面上部のバナーで表示する機能を追加'},
+      { type: 'add', text: 'イベント： オプション・アンケートに自由入力を追加'},
+      { type: 'add', text: 'イベント： 参加者一覧をオプションで絞り込む機能を追加'},
+      { type: 'add', text: 'イベント： 出欠登録に、出欠・集金での絞り込みと各参加者が選んだオプションの表示を追加'},
+      { type: 'add', text: 'イベント： 作成画面から開催できるイベント・できないイベントを確認できるように追加'},
+      { type: 'add', text: '日程調整： 複数日にわたる候補日を作成できる機能を追加'},
+      { type: 'change', text: 'すべての画面のデザインを刷新'},
+      { type: 'change', text: 'イベント： 参加・変更・キャンセルの操作を1つのボタンにまとめ、参加条件をバッジで表示するよう変更'},
+      { type: 'change', text: 'イベント： 「主催者へ連絡」「参加者へ連絡」を「連絡」メニューにまとめるよう変更'},
+      { type: 'change', text: 'イベント： 参加者の編集画面で、状態ごとの操作をその場で反映するよう変更'},
+      { type: 'change', text: 'イベント： キャンセル時にもコメントを書けるよう変更'},
+      { type: 'change', text: 'イベント： 参加規約を、参加登録者が出るまでは変更できるよう変更（削除はいつでも可能）'},
+      { type: 'change', text: 'イベント： 非公開のイベントを、URLを知っていればログインしている人が誰でも開けるよう変更'},
+      { type: 'change', text: 'イベント・日程調整： 作成・編集画面を再構成し、日程調整もイベントと同じ形に統一'},
+      { type: 'change', text: 'イベント・日程調整： 参加者CSVの日時を +09:00 付きの形式にし、イベント情報の行と参加リクエストの表示名を追加'},
+      { type: 'change', text: '日程調整： 参加規約を、回答者がいないうちは変更できるよう変更'},
+      { type: 'change', text: 'ログイン画面を刷新し、利用規約への同意をログイン画面に統合'},
+      { type: 'change', text: '投稿権限を後から付与する画面を追加し、連絡を書き始める前に案内するよう変更'},
+      { type: 'change', text: 'お知らせの管理方法を変更し、フッターからお知らせ一覧を開けるよう変更'},
+      { type: 'change', text: '利用規約およびプライバシーポリシーを改定'},
+      { type: 'change', text: 'セッション履歴などのアクセスに関する記録を90日で消去するよう変更'},
+      { type: 'change', text: 'システム基盤の全面的な刷新（このため、リリース時に一度ログアウトされます）'},
+      { type: 'remove', text: 'イベント： イベントの削除機能を廃止（中止をご利用ください）'},
+      { type: 'remove', text: 'マイページ： カレンダー・統計情報を廃止'},
+      { type: 'fix', text: 'イベント： キャンセルしたあとに再登録できない問題を修正'},
+      { type: 'fix', text: 'イベント： 中止したイベントが詳細と一覧で分かりにくい問題を修正'},
+      { type: 'fix', text: '日程調整： 回答期限が正しく設定されないことがある問題を修正'},
+      { type: 'fix', text: '日程調整： 編集画面で候補日の時刻が消えて見える問題を修正'},
+      { type: 'fix', text: 'グループ： 「あなたのグループ」を開くとエラーになる問題を修正'},
+      { type: 'fix', text: '特定のケースでタイムゾーンのずれにより日時や残り時間が誤って表示される問題を修正'},
+      { type: 'fix', text: '特定のケースでログイン状態が正しく表示されない問題を修正'},
+      { type: 'fix', text: '非公開のイベント・日程調整の情報がリンクのプレビューに表示される問題を修正'},
+      { type: 'fix', text: 'ログインし直すたびに連携アプリが増えていく問題を修正（Misskeyは2026.9.0以降のサーバーのみ）'},
+      { type: 'fix', text: 'セッション管理に関するセキュリティ改善'},
+      { type: 'fix', text: 'OAuthに関するセキュリティ改善'},
+      { type: 'fix', text: 'その他のセキュリティ改善'},
+      { type: 'fix', text: 'パフォーマンスの改善'},
+      { type: 'fix', text: 'その他軽微なバグの修正'},
+    ],
+  },
+  {
+    version: '1.4',
+    date: '2026/2/5',
+    changes: [
+      { type: 'add', text: 'Xでログインを追加'},
+      { type: 'change', text: 'ログイン画面のデザイン変更'},
+      { type: 'fix', text: 'グループに関する権限チェック不足を修正'},
+      { type: 'fix', text: 'OAuthに関するセキュリティ改善'},
+      { type: 'fix', text: 'その他のセキュリティ改善'},
+    ],
+  },
+  {
+    version: '1.3',
+    date: '2026/2/3',
+    changes: [
+      { type: 'add', text: 'グループ機能を追加'},
+      { type: 'add', text: 'Markdownエディタ（β）を追加'},
+      { type: 'add', text: 'Markdownにて文字色の変更に対応'},
+      { type: 'add', text: 'イベント： 既存のイベントをクローンして新しいイベントを作成する機能を追加'},
+      { type: 'add', text: '日程調整： 回答者全員へ連絡できる機能の追加'},
+      { type: 'change', text: 'イベント： メンテナンス性向上のため参加者の回答を編集する機能を専用ページを分離'},
+      { type: 'change', text: 'イベント： 参加者保護のためイベントページを削除できる条件を変更'},
+      { type: 'change', text: 'イベント： 参加登録できるサーバーを後から削除できるよう修正'},
+      { type: 'change', text: 'イベント： 参加期限に関するバリデーション条件を変更'},
+      { type: 'change', text: '日程調整： 候補日のテーブルレイアウトを変更'},
+      { type: 'change', text: '日程調整： 候補日を指定する際にカレンダーから一括登録できるように変更'},
+      { type: 'change', text: 'イベント・日程調整を探すページを非ログイン状態でも閲覧できるよう変更'},
+      { type: 'change', text: 'ハッシュタグページのリニューアル'},
+      { type: 'change', text: '参加者保護のためユーザー削除に対するバリデーションを追加'},
+      { type: 'fix', text: 'イベント： ダッシュボードで誤った統計情報が表示される問題を修正'},
+      { type: 'fix', text: 'イベント： イベント編集ページで特定の不正な入力を受けるとサーバーがクラッシュする問題を修正'},
+      { type: 'fix', text: 'イベント： イベント編集ページを開いた直後めっちゃ早くボタンを押すとバグる問題を修正'},
+      { type: 'fix', text: 'イベント： Mastodonアカウントで参加者へ連絡機能を使うとURLが重複して入力されるケースがある問題を修正'},
+      { type: 'fix', text: 'イベント： 開催日当日ではないのに本日開催と表示される問題を修正'},
+      { type: 'fix', text: '日程調整： 探すページの一覧画面のUI修正漏れを修正'},
+      { type: 'fix', text: '日程調整： ダッシュボードや探すページなどで回答していない日程調整でも回答しているように表示されることがある問題を修正'},
+      { type: 'fix', text: '特定のケースでログイン前のキャッシュが利用され正確な情報が表示されないことがある問題を修正'},
+      { type: 'fix', text: '特定のケースで参加できないイベント・日程調整でも参加できるようなボタンが表示されてしまう問題を修正'},
+      { type: 'fix', text: '特定のケースでタイムゾーン変換のバグにより開催日や回答締切がずれて表示される可能性がある問題を修正'},
+      { type: 'fix', text: '極めて長い関連URLやSNSのIDに関する表示の問題を修正'},
+      { type: 'fix', text: 'ダッシュボードで誤った統計情報が表示される問題を修正'},
+      { type: 'fix', text: 'パフォーマンスの改善'},
+      { type: 'fix', text: '軽微なセキュリティの問題を改善'},
+      { type: 'fix', text: 'その他軽微なバグの修正'},
+    ],
+  },
+  {
+    version: '1.2',
+    date: '2026/1/9',
+    changes: [
+      { type: 'add', text: 'Markdownにおいて折りたたみ（:::details）機能を追加'},
+      { type: 'add', text: 'イベント： 固定アクションバーにいくつかのメニューを追加'},
+      { type: 'add', text: 'イベント： ハッシュタグで検索する機能を追加'},
+      { type: 'add', text: '日程調整： 最下部にスクロール追従する固定アクションバーを追加'},
+      { type: 'add', text: 'マイページにイベントカレンダーを追加'},
+      { type: 'add', text: '日程調整に関するモデレーション機能を追加'},
+      { type: 'change', text: 'イベント・日程調整・マイページの全ての画面を再設計'},
+      { type: 'change', text: 'サーバー限定機能について、Fediverse・Discordをそれぞれ有効・無効が選択できるように変更'},
+      { type: 'change', text: 'サーバー限定機能について、あとから有効にできるように変更'},
+      { type: 'fix', text: '特定の条件下でDiscordでログインできない問題を解消'},
+      { type: 'fix', text: '2月31日など存在しない日付でイベント作成を試みた場合の問題を修正'},
+      { type: 'fix', text: 'Misskeyサーバーで投稿する文字制限が500文字となっていた問題を修正'},
+      { type: 'fix', text: '特定の場合に外部へのリンクがクッションページをバイパスできてしまう問題を修正'},
+      { type: 'fix', text: 'MarkdownにおけるH4（####）の表示および特定のケースのみ改行が反映されない問題の修正'},
+      { type: 'fix', text: 'その他軽微なバグの修正'},
+    ],
+  },
+  {
+    version: '1.1',
+    date: '2025/12/25',
+    changes: [
+      { type: 'add', text: '幹事機能（参加者への連絡）： 参加者が多く投稿文字数制限を超過する場合に自動で投稿を分割する機能を追加' },
+      { type: 'add', text: 'イベント： 最下部にスクロール追従する固定アクションバーを追加' },
+      { type: 'add', text: 'イベント： 「主催者に連絡する」ボタンの追加'},
+      { type: 'add', text: 'イベント： 「参加リクエスト機能」の追加と幹事が参加を承認できる機能の追加' },
+      { type: 'add', text: 'イベント： 「場所」横にGoogle Mapへのリンクを追加' },
+      { type: 'add', text: 'イベント： 幹事が「イベントを中止する」を宣言できる機能' },
+      { type: 'fix', text: '幹事機能（参加者への連絡）： UIの大幅な改善' },
+      { type: 'fix', text: '幹事機能（参加者への連絡）： 投稿権限不足の際の画面遷移を1つ減らしUXを改善' },
+      { type: 'fix', text: '幹事機能（参加者への連絡）： Mastodon APIコール時のエラー処理を改善' },
+      { type: 'fix', text: 'イベント： イベント作成／編集画面のUIの大幅な改善'},
+      { type: 'fix', text: 'イベント： イベント作成者が自分自身のイベントを通報できてしまう問題を修正'},
+      { type: 'fix', text: 'マイページ： UIの改善'},
+      { type: 'fix', text: 'その他軽微なバグの修正'},
+    ],
+  },
+  {
+    version: '1.0',
+    date: '2025/12/13',
+    changes: [
+      { type: 'add', text: 'ドメインを本運用ドメインに変更、本格リリース' },
+      { type: 'add', text: 'イベント： OGP対応'},
+      { type: 'add', text: 'イベント： ハッシュタグ機能の追加'},
+      { type: 'fix', text: '全体的なUIの改善' },
+      { type: 'fix', text: '一部IPv6環境でログインに失敗する問題の修正'},
+      { type: 'fix', text: 'イベント： 説明欄に内部リンクを利用した場合の処理エラーを修正'},
+      { type: 'fix', text: 'その他軽微なバグの修正' },
+    ],
+  },
+  {
+    version: '0.9',
+    date: '2025/7/16',
+    changes: [
+      { type: 'add', text: '仮ドメインでリリース' },
+      { type: 'add', text: 'イベント・日程調整機能のリリース' },
+      { type: 'add', text: 'Mastodon/Misskey/Pleroma(Beta)/Discord(Beta)でのログインに対応' },
+    ],
+  },
+]
+
+export default function ReleaseNotes() {
+  return (
+    <ContentPage
+      title="リリースノート"
+      lead="メジャーリリース日に、マイナーリリースの内容も含めて記載しています。そのため、リリース日より前に機能や修正が出ていることがあります。"
+    >
+      <div className="space-y-8">
+        {releaseNotes.map((release) => (
+          <section key={release.version}>
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-lg font-bold text-foreground">Ver {release.version}</h2>
+              <span className="text-sm text-muted-foreground">{release.date}</span>
+            </div>
+
+            <ul className="mt-3 rule-y">
+              {release.changes.map((change, index) => {
+                const { label, icon: Icon } = changeTypeConfig[change.type]
+                return (
+                  <li key={index} className="flex items-start gap-3 py-2">
+                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      <Icon className="size-3" aria-hidden />
+                      {label}
+                    </span>
+                    <span className="text-sm text-foreground">{change.text}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </ContentPage>
+  )
+}

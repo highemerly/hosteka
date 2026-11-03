@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/orgs/check-slug > slug 未指定は400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "Invalid input: expected string, received undefined",
+          "path": "slug",
+        },
+      ],
+      "message": "クエリの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`GET /api/v1/orgs/check-slug > 使用中の slug は available: false 1`] = `
+{
+  "body": {
+    "data": {
+      "available": false,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/orgs/check-slug > 未使用の slug は available: true 1`] = `
+{
+  "body": {
+    "data": {
+      "available": true,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/orgs/check-slug > 編集時に自分自身を除外できる 1`] = `
+{
+  "body": {
+    "data": {
+      "available": true,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

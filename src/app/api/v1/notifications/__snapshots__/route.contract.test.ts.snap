@@ -1,0 +1,44 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/notifications > 自分の通知を新しい順で返す 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "actor": {
+          "avatar": null,
+          "displayName": "主催さん",
+          "id": "user_9",
+          "platform": "mastodon",
+          "server": "example.social",
+          "username": "host",
+        },
+        "category": "participant",
+        "href": "/events/evt_1",
+        "id": "ntf_1",
+        "kind": "event_updated",
+        "occurredAt": "2026-09-18T06:00:00.000Z",
+        "payload": {
+          "changed": [
+            "日時",
+            "場所",
+          ],
+          "title": "花見の会",
+        },
+        "repeatCount": 2,
+        "targetId": "evt_1",
+        "targetType": "event",
+        "unread": true,
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 20,
+      "total": 1,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

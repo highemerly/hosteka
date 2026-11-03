@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/admin/announcements > 一般ユーザーは403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "管理者権限が必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`GET /api/v1/admin/announcements > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/admin/announcements > 管理者には予約分も含めて返す 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "body": "## 停止する時間",
+        "id": 1,
+        "pinnedUntil": "2026-07-02T00:00:00.000Z",
+        "publishedAt": "2026-06-20T10:30:00.000Z",
+        "title": "メンテナンスのお知らせ",
+        "type": "warning",
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 20,
+      "total": 1,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`POST /api/v1/admin/announcements > 作成すると201で作ったものを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "body": "## 停止する時間",
+      "id": 1,
+      "pinnedUntil": "2026-07-02T00:00:00.000Z",
+      "publishedAt": "2026-06-20T10:30:00.000Z",
+      "title": "メンテナンスのお知らせ",
+      "type": "warning",
+    },
+  },
+  "contentType": "application/json",
+  "status": 201,
+}
+`;
+
+exports[`POST /api/v1/admin/announcements > 題名が無ければ400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "題名は必須です",
+          "path": "title",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;

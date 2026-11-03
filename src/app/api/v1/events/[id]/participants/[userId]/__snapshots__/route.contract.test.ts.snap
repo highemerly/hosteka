@@ -1,0 +1,112 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DELETE /api/v1/events/[id]/participants/[userId] > 参加中の人は消せない（400） 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "「参加」の人にはこの操作はできません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > キャンセルの人は参加に戻せない（400） 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "「キャンセル」の人にはこの操作はできません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 主催者・幹事でなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "イベントの参加者の管理は主催者・幹事のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 参加リクエストを承認すると参加になる 1`] = `
+{
+  "body": {
+    "data": {
+      "isOrganizer": false,
+      "status": "attending",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 参加者がいなければ404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "参加者が見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 幹事の指定は作成者だけ（403） 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "幹事の指定は主催者のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`PATCH /api/v1/events/[id]/participants/[userId] > 読んでから状態が変わっていたら409 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "CONFLICT",
+      "message": "参加状態が変わっていたため、操作しませんでした",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 409,
+}
+`;

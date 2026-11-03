@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/admin/users > IP は配列に直し、件数は counts にまとめる。アクセストークンは返さない 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "avatar": null,
+        "bannedAt": null,
+        "counts": {
+          "eventParticipations": 5,
+          "events": 2,
+          "orgs": 0,
+          "preEventResponses": 2,
+          "preEvents": 1,
+        },
+        "createdAt": "2025-12-24T03:00:00.000Z",
+        "displayName": "テスト太郎",
+        "id": "user_1",
+        "ipAddresses": [
+          "203.0.113.5",
+          "198.51.100.7",
+        ],
+        "isAdmin": false,
+        "lastLoginAt": "2026-09-10T11:00:00.000Z",
+        "lastTermsAcceptedAt": "2026-01-01T00:00:00.000Z",
+        "platform": "mastodon",
+        "server": "example.social",
+        "username": "taro",
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 20,
+      "total": 1,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

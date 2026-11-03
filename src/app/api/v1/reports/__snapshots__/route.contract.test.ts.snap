@@ -1,0 +1,101 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`POST /api/v1/reports > どちらも指定しないと400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "イベントか日程調整のどちらか一方を指定してください",
+          "path": "eventId",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`POST /api/v1/reports > イベントと日程調整の両方を指定すると400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "イベントか日程調整のどちらか一方を指定してください",
+          "path": "eventId",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`POST /api/v1/reports > 作成に成功すると201 1`] = `
+{
+  "body": {
+    "data": {
+      "id": "rep_1",
+    },
+  },
+  "contentType": "application/json",
+  "status": 201,
+}
+`;
+
+exports[`POST /api/v1/reports > 存在しないイベントは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "イベントが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`POST /api/v1/reports > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`POST /api/v1/reports > 理由が空なら400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "通報理由は必須です",
+          "path": "reason",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;

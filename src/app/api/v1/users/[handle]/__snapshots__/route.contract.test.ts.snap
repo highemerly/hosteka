@@ -1,0 +1,95 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/users/[handle] > ハンドルの形になっていなければ404。DBも引かない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "ユーザーが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/users/[handle] > 停止中の人は404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "ユーザーが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/users/[handle] > 居ない人は404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "ユーザーが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/users/[handle] > 未ログインでも詳細を返す（公開） 1`] = `
+{
+  "body": {
+    "data": {
+      "bio": "よろしくお願いします",
+      "hasEmail": true,
+      "homepageUrls": [
+        "https://example.test",
+      ],
+      "joinedAt": "2026-01-15T00:00:00.000Z",
+      "organizations": [
+        {
+          "id": "org_1",
+          "name": "わたしの会",
+          "role": "admin",
+          "slug": "my-group",
+        },
+      ],
+      "socialAccounts": [
+        {
+          "platform": "misskey",
+          "server": "misskey.io",
+          "username": "taro",
+        },
+      ],
+      "stats": {
+        "all": {
+          "events": 3,
+          "people": 14,
+          "preEvents": 2,
+        },
+        "personal": {
+          "events": 3,
+          "people": 14,
+          "preEvents": 2,
+        },
+      },
+      "user": {
+        "avatar": "https://example.test/a.png",
+        "displayName": "テスト太郎",
+        "id": "user_1",
+        "platform": "mastodon",
+        "server": "example.social",
+        "username": "taro",
+      },
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

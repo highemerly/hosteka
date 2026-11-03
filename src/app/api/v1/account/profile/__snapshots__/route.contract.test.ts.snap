@@ -1,0 +1,179 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/account/profile > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/account/profile > 自分のプロフィールを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "bio": "よろしくお願いします",
+      "email": "taro@example.test",
+      "homepageUrls": [
+        "https://example.test",
+      ],
+      "socialAccounts": [
+        {
+          "platform": "misskey",
+          "server": "misskey.io",
+          "username": "taro",
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > SNSの上限を超えると400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "SNSのアカウントは5件まで登録できます",
+          "path": "socialAccounts",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > X のサーバーを付けずに送ると400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "サーバーは必須です",
+          "path": "socialAccounts.0.server",
+        },
+        {
+          "message": "Xのサーバーは x.com です",
+          "path": "socialAccounts.0.server",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > ホームページの上限を超えると400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "ホームページは2件まで登録できます",
+          "path": "homepageUrls",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > 保存して、更新後の値を返す 1`] = `
+{
+  "body": {
+    "data": {
+      "bio": "よろしくお願いします",
+      "email": "taro@example.test",
+      "homepageUrls": [
+        "https://example.test",
+      ],
+      "socialAccounts": [
+        {
+          "platform": "misskey",
+          "server": "misskey.io",
+          "username": "taro",
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > 形になっていないメールアドレスは400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "メールアドレスは正しい形式で入力してください",
+          "path": "email",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > 未ログインでは401。DBに触らない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`PUT /api/v1/account/profile > 項目を落として送ると400。黙って消えない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "SNSのアカウントを指定してください",
+          "path": "socialAccounts",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;

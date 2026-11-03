@@ -1,0 +1,55 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DELETE /api/v1/account/sessions/[id] > いまの端末はここから切らない。Cookie だけ残って黙って弾かれる 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "この端末はログアウトから終了してください",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;
+
+exports[`DELETE /api/v1/account/sessions/[id] > 他人のセッションは404。存在を教えない 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "対象のセッションが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`DELETE /api/v1/account/sessions/[id] > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`DELETE /api/v1/account/sessions/[id] > 自分のセッションを失効させる 1`] = `
+{
+  "body": {
+    "data": {
+      "revoked": true,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

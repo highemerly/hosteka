@@ -1,0 +1,50 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/home > 看板のイベントを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "featured": [
+        {
+          "attendees": [
+            {
+              "avatar": null,
+              "displayName": "テスト花子",
+              "id": "user_2",
+              "platform": "mastodon",
+              "server": "example.social",
+              "username": "hanako",
+            },
+          ],
+          "attendingCount": 21,
+          "creator": {
+            "avatar": null,
+            "displayName": "テスト太郎",
+            "id": "user_1",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "taro",
+          },
+          "endDate": "2026-09-12T13:00:00.000Z",
+          "fee": "3,000円",
+          "hasEndTime": true,
+          "hasStartTime": true,
+          "hashtags": [
+            "fediverse交流会",
+          ],
+          "id": "evt_1",
+          "location": "渋谷",
+          "maxParticipants": 40,
+          "organization": null,
+          "registrationDeadline": "2026-09-10T14:59:00.000Z",
+          "startDate": "2026-09-12T10:00:00.000Z",
+          "status": "active",
+          "title": "Fediverse 交流会",
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

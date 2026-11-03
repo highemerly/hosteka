@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/admin/overview > 一般ユーザーは 403（画面が「管理者だけ」と案内する） 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "管理者権限が必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`GET /api/v1/admin/overview > 管理者には件数を返す 1`] = `
+{
+  "body": {
+    "data": {
+      "announcements": 5,
+      "events": 10,
+      "orgs": 3,
+      "pendingReports": 2,
+      "preEvents": 4,
+      "users": 30,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

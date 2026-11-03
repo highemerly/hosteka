@@ -1,0 +1,823 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@plugin "@tailwindcss/typography";
+/*
+  ---break---
+*/
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* フォントは :root で定義する。@theme に置くと shadcn の
+     `@theme inline { --font-sans: var(--font-sans) }` に上書きされて
+     循環参照になり、指定が丸ごと効かなくなる。 */
+
+  /*
+    marquee は下の @keyframes / .animate-marquee で定義する。
+    旧 tailwind.config.js 由来の @theme 版（10s / -100%）をここに残すと、
+    同名の @keyframes が後勝ちして -33.333% 前提のトップページが
+    3倍速で流れてしまう。marquee-vertical は未使用。
+  */
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Custom animations */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/*
+  流れているのは**押せるカード**なので、狙いを定められる時間を作る。
+  止まらないと、押そうとした先が指の下から逃げ続ける。
+*/
+.animate-marquee:hover,
+.animate-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+/* 動きを減らす設定では流さない。止めた状態でも先頭は読める */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* Shake animation for attention */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-shake:hover {
+  animation: none;
+}
+
+/* Slide up animation for mobile modal */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Markdown
+
+   本文の体裁は @tailwindcss/typography (prose) に任せ、ここでは prose の色を
+   セマンティックトークンへ差し替える設定と、typography が扱わない独自記法
+   (:::details / 色文字) だけを持つ。以前は約 200 行の 16 進色ベタ書きで、
+   ダークモードでは白背景に白文字になっていた。
+   --------------------------------------------------------------------------- */
+.markdown-content {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--brand-event);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--border);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--muted-foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+  /*
+    URL のように区切りの無い長い語も、行に入りきらなければ途中で折る。
+    break-word ではなく anywhere にするのは、最小幅の計算にも効かせるため
+    （flex や grid の中だと、break-word では枠ごと押し広げてはみ出す）。
+  */
+  overflow-wrap: anywhere;
+}
+
+/* typography はコードに ` を付けるが、独自記法と混ざるため無効化する */
+.markdown-content :where(code):not(:where([class~='not-prose'] *))::before,
+.markdown-content :where(code):not(:where([class~='not-prose'] *))::after {
+  content: none;
+}
+
+/* 折りたたみ (:::details) — typography の対象外 */
+.markdown-content details {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.markdown-content details summary {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--surface-subtle);
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.markdown-content details summary::-webkit-details-marker {
+  display: none;
+}
+
+.markdown-content details summary::before {
+  content: '\25b6';
+  font-size: 0.625rem;
+  transition: transform 0.2s ease;
+}
+
+.markdown-content details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.markdown-content details summary:hover {
+  background-color: var(--accent);
+}
+
+.markdown-content details > *:not(summary) {
+  padding-inline: 0.75rem;
+}
+
+.markdown-content details > *:first-of-type:not(summary) {
+  padding-top: 0.5rem;
+}
+
+.markdown-content details > *:last-child {
+  padding-bottom: 0.5rem;
+}
+
+/* 色文字 — SafeMarkdown のホワイトリストと対応する。
+   ライト/ダークどちらの背景でも読めるよう明度を調整している。 */
+.markdown-content .text-color-red {
+  color: oklch(0.577 0.245 27.325);
+}
+.markdown-content .text-color-blue {
+  color: oklch(0.546 0.215 262.9);
+}
+.markdown-content .text-color-green {
+  color: oklch(0.627 0.194 149.2);
+}
+.markdown-content .text-color-orange {
+  color: oklch(0.646 0.222 41.1);
+}
+.markdown-content .text-color-purple {
+  color: oklch(0.585 0.233 297.0);
+}
+.markdown-content .text-color-pink {
+  color: oklch(0.592 0.249 0.6);
+}
+.markdown-content .text-color-gray {
+  color: var(--muted-foreground);
+}
+
+.dark .markdown-content .text-color-red {
+  color: oklch(0.704 0.191 22.216);
+}
+.dark .markdown-content .text-color-blue {
+  color: oklch(0.707 0.165 254.6);
+}
+.dark .markdown-content .text-color-green {
+  color: oklch(0.741 0.164 148.5);
+}
+.dark .markdown-content .text-color-orange {
+  color: oklch(0.75 0.166 55.9);
+}
+.dark .markdown-content .text-color-purple {
+  color: oklch(0.714 0.184 300.0);
+}
+.dark .markdown-content .text-color-pink {
+  color: oklch(0.718 0.202 349.8);
+}
+
+
+/*
+  チェックボックス / ラジオのネイティブ描画を復帰させる。
+
+  Tailwind v4 の preflight は input 全般に
+    background-color: transparent; color: inherit; border-radius: 0
+  を当てる。チェックボックスとラジオは appearance が既定のままなので、
+  下地を失って継承した文字色（＝黒）でベタ塗りされ、未チェックなのか
+  チェック済みなのか判別できなくなる。UA 既定へ戻す。
+*/
+input[type='checkbox'],
+input[type='radio'] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  /* preflight の background-color: transparent を打ち消し、UA のフィールド色に戻す。
+     Field はシステム色なので color-scheme に追従する。 */
+  background-color: Field;
+  accent-color: var(--brand-event);
+}
+
+/*
+  iOS Safari の日付・時刻欄。
+
+  `appearance: none` は iOS 独自の見た目を外すために要るが、外すと
+  **欄が中身の幅しか持たなくなる。** 未入力のときは中身が無いので、
+  `w-auto` の欄は幅がゼロになり、押す場所が無くなる。
+  値が入ったときとほぼ同じ幅（2026/10/02 と 12:34 に左右の余白）を
+  最小の幅として持たせる。
+
+  ここは @layer の外なので、Input の `min-w-0` より強い。
+*/
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+input[type="date"] {
+  min-width: 8em;
+}
+input[type="time"] {
+  min-width: 5em;
+}
+/* iOS は値を欄の中央に寄せる。ほかの欄と同じ側に揃える */
+input::-webkit-date-and-time-value {
+  text-align: start;
+}
+/*
+  ---break---
+*/
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-primary-surface: var(--primary-surface);
+  --color-primary-surface-hover: var(--primary-surface-hover);
+  --color-primary-surface-foreground: var(--primary-surface-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+
+  /* アプリ固有トークンをユーティリティとして公開する。
+     例: bg-brand-event / text-status-attending / bg-surface-subtle */
+  --color-brand-event: var(--brand-event);
+  --color-brand-event-foreground: var(--brand-event-foreground);
+  --color-brand-pre-event: var(--brand-pre-event);
+  --color-brand-pre-event-foreground: var(--brand-pre-event-foreground);
+  --color-status-attending: var(--status-attending);
+  --color-status-attending-foreground: var(--status-attending-foreground);
+  --color-status-maybe: var(--status-maybe);
+  --color-status-maybe-foreground: var(--status-maybe-foreground);
+  --color-status-not-attending: var(--status-not-attending);
+  --color-status-not-attending-foreground: var(--status-not-attending-foreground);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-foreground: var(--status-cancelled-foreground);
+  --color-status-request: var(--status-request);
+  --color-status-request-foreground: var(--status-request-foreground);
+  --color-surface-subtle: var(--surface-subtle);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+/*
+  ---break---
+*/
+:root {
+  /*
+    Geist は日本語グリフを持たない。v3 までは `body { font-family: Arial, ... }`
+    が暗黙にシステムの日本語フォントへ受け渡していたが、v4 移行でその指定が
+    消えたため、日本語フォールバックを明示する必要がある。省略すると全ページの
+    日本語の見た目が変わる。
+    @theme ではなくここに置くこと（@theme inline の自己参照に負けるため）。
+  */
+  --font-sans:
+    var(--font-geist-sans), 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'Noto Sans JP', 'Yu Gothic UI', 'Yu Gothic', Meiryo, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono',
+    'Hiragino Sans', 'Noto Sans JP', monospace;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* 青系基調。primary は青。 */
+  --primary: oklch(0.546 0.215 262.9);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.5 0.215 262.9);
+  /*
+    primary の淡い面（トーナル）。**同じ青の別の強さ**であって別の色ではない。
+    塗りつぶした primary が「押してほしい」、この面が「もう済んでいる／
+    自分の領域である」を表す（docs/DESIGN_GUIDELINES.md）。
+
+    以前はここに緑（--success）を置いていたが、面の明度が 0.965 で白い
+    カードとの差が 1.10 しかなく、**ボタンではなく淡い札に見えていた**。
+    面は必ずカードから見分けられる明度差を持たせる
+    （src/app/globals.contrast.test.ts が検査する）。
+  */
+  --primary-surface: oklch(0.92 0.045 262.9);
+  --primary-surface-hover: oklch(0.88 0.05 262.9);
+  /* 淡い面の上では primary そのままだと 4.07:1 で基準を割る。文字は一段濃くする */
+  --primary-surface-foreground: oklch(0.42 0.19 262.9);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  /*
+    補助テキスト。**タグやバッジの淡い面（--muted）の上に載る**ので、
+    白背景ではなくその面を基準に見る必要がある。
+    元の 0.556 は白地で 4.73:1 だが、--muted の上では 4.34:1 で
+    4.5:1 を割っていた。0.50 にして 6.00 / 5.50 にする。
+  */
+  --muted-foreground: oklch(0.50 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.546 0.215 262.9);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+
+  /* ---------------------------------------------------------------------
+     立体表現（ニューモーフィズム）
+     操作可能な要素にのみ使う。カードなど「読ませる面」には使わない。
+     影だけで押せることを示さないこと（影はダーク背景や高コントラスト設定で
+     消える）。必ず境界かラベルを併用する。
+     --------------------------------------------------------------------- */
+  --raised-light: oklch(1 0 0 / 0.9);
+  --raised-dark: oklch(0.72 0.02 262 / 0.28);
+  --raised-shadow:
+    -2px -2px 5px var(--raised-light), 3px 3px 7px var(--raised-dark);
+  --raised-shadow-hover:
+    -1px -1px 4px var(--raised-light), 4px 4px 10px var(--raised-dark);
+  /* 押し込み時。内側に落とす */
+  --pressed-shadow:
+    inset 2px 2px 5px var(--raised-dark), inset -2px -2px 5px var(--raised-light);
+  /*
+    選択部品（セグメント・選択チップ）用。ボタンより弱くする。
+    選択肢が横に何個も並ぶため、ボタンと同じ強さだと画面が凹凸だらけになる。
+  */
+  --raised-shadow-subtle:
+    -1px -1px 2px var(--raised-light), 1px 1px 3px var(--raised-dark);
+  /*
+    色付きの面（primary / state / destructive）用。
+    ニューモーフィズムの左上ハイライトは白なので、塗りつぶした面の上では
+    見えない。結果として立体表現が半分しか出ず、中立色のボタンより
+    平たく見えてしまう。
+    面の内側に上辺のベベルを入れて、色の上でも縁が立つようにする。
+  */
+  --raised-shadow-on-color:
+    inset 0 1px 0 oklch(1 0 0 / 0.28), inset 0 -1px 0 oklch(0 0 0 / 0.12),
+    2px 3px 7px var(--raised-dark);
+  --raised-shadow-on-color-hover:
+    inset 0 1px 0 oklch(1 0 0 / 0.34), inset 0 -1px 0 oklch(0 0 0 / 0.12),
+    3px 4px 10px var(--raised-dark);
+
+  /* ---------------------------------------------------------------------
+     罫線
+     区切り線は「読ませる面」に属するので押し出さない。線の下に
+     ハイライトを1px置いて、面を薄く掘った溝に見せる（光源は左上）。
+     **ライトの地は純白（--background: oklch(1 0 0)）なので、白の
+     ハイライトはそこでは見えない。** ライトでは線そのものを --border より
+     一段濃くして輪郭を出し、彫りが効くのはダークだけ、と割り切っている。
+     白より明るい色は作れないので、ここで無理に立体を出そうとすると
+     地を灰色に濁らせることになる。
+     --------------------------------------------------------------------- */
+  --rule-line: oklch(0.88 0.005 262);
+  --rule-highlight: oklch(1 0 0 / 0.9);
+
+  /* ---------------------------------------------------------------------
+     Liquid Glass
+     背景の上に浮いている層（ヘッダー・モーダル・メニュー・モバイルの
+     アクションバー）にのみ使う。
+     --------------------------------------------------------------------- */
+  --glass-bg: oklch(1 0 0 / 0.72);
+  --glass-border: oklch(1 0 0 / 0.6);
+  --glass-blur: 16px;
+
+  /* 一段沈んだ面（フォームの下地など） */
+  --surface-subtle: oklch(0.975 0.005 262);
+
+  /*
+    カレンダーの日めくりバッジ用の赤。
+    **ボタン色ではない。** 日付であることを一目で示すための装飾で、
+    操作可能な要素には使わない（docs/DESIGN_GUIDELINES.md の
+    「ボタン色は primary とそれ以外の2系統のみ」に抵触しない）。
+  */
+  --calendar-accent: oklch(0.577 0.222 27.3);
+  --calendar-accent-foreground: oklch(0.99 0 0);
+  /*
+    日付の面は紙に見立てるので、ダークでも白地・黒文字で固定する。
+    テーマに追従させると黒地に白文字になり、カレンダーではなく
+    ただのバッジに見える。
+  */
+  --calendar-paper: oklch(0.99 0 0);
+  --calendar-paper-foreground: oklch(0.2 0 0);
+  --calendar-paper-muted: oklch(0.5 0 0);
+
+  /*
+    候補日の札（日程調整）の帯。**`--brand-pre-event` は使えない。**
+    あちらは暗い背景に置く識別色で、白文字との比が 3.50:1 しかない。
+    紙面は両テーマとも白なので、この帯もテーマに追従させず同じ値を持つ。
+  */
+  --candidate-accent: oklch(0.52 0.105 221.7);
+  --candidate-accent-foreground: oklch(0.99 0 0);
+  /* 後ろに覗く紙。**紙面より一段暗くする** — 縁だけでは白地に沈んで見えない */
+  --candidate-stack: oklch(0.88 0 0);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* ---------------- アプリ固有トークン（ライト） ---------------- */
+  /* ブランド: イベント / 日程調整 の識別色 */
+  --brand-event: oklch(0.546 0.215 262.9); /* 旧 blue-600 */
+  --brand-event-foreground: oklch(0.985 0 0);
+  --brand-pre-event: oklch(0.609 0.126 221.7); /* 旧 cyan-600 */
+  --brand-pre-event-foreground: oklch(0.985 0 0);
+
+  /* 参加ステータス。EventParticipant.status と1対1に対応する */
+  --status-attending: oklch(0.627 0.194 149.2); /* 参加 */
+  --status-attending-foreground: oklch(0.985 0 0);
+  --status-maybe: oklch(0.681 0.162 75.8); /* 未定 */
+  --status-maybe-foreground: oklch(0.216 0 0);
+  --status-not-attending: oklch(0.551 0.027 264.4); /* 不参加 */
+  --status-not-attending-foreground: oklch(0.985 0 0);
+  --status-cancelled: oklch(0.577 0.245 27.325); /* キャンセル */
+  --status-cancelled-foreground: oklch(0.985 0 0);
+  --status-request: oklch(0.585 0.233 297.0); /* 参加リクエスト */
+  --status-request-foreground: oklch(0.985 0 0);
+
+  /* 面（surface）。カードより一段沈んだ背景 */
+  --surface-subtle: oklch(0.985 0.001 264.5); /* 旧 gray-50 */
+}
+/*
+  ---break---
+*/
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* ダークでは明度を上げてコントラストを確保する */
+  --primary: oklch(0.707 0.165 254.6);
+  --primary-foreground: oklch(0.17 0.02 262);
+  --primary-hover: oklch(0.75 0.165 254.6);
+  /*
+    トーナルの面（ダーク）。ライトとは向きが逆で、**カードより明るく**する。
+    暗いままだと外側の影が沈んでボタンに見えない。
+  */
+  --primary-surface: oklch(0.30 0.07 262.9);
+  --primary-surface-hover: oklch(0.35 0.08 262.9);
+  --primary-surface-foreground: oklch(0.86 0.08 262.9);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  /* 淡い面の上で 5.83:1 → 7.04:1。暗い面ほど文字が沈んで読みにくい */
+  --muted-foreground: oklch(0.76 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  /* ---------------- アプリ固有トークン（ダーク） ---------------- */
+  /* 暗い背景に対するコントラストを確保するため、明度を上げ彩度を下げる */
+  --brand-event: oklch(0.707 0.165 254.6);
+  --brand-event-foreground: oklch(0.205 0 0);
+  --brand-pre-event: oklch(0.750 0.106 220.0);
+  --brand-pre-event-foreground: oklch(0.205 0 0);
+
+  --status-attending: oklch(0.741 0.164 148.5);
+  --status-attending-foreground: oklch(0.205 0 0);
+  --status-maybe: oklch(0.795 0.148 85.9);
+  --status-maybe-foreground: oklch(0.205 0 0);
+  --status-not-attending: oklch(0.708 0.022 264.4);
+  --status-not-attending-foreground: oklch(0.205 0 0);
+  --status-cancelled: oklch(0.704 0.191 22.216);
+  --status-cancelled-foreground: oklch(0.205 0 0);
+  --status-request: oklch(0.714 0.184 300.0);
+  --status-request-foreground: oklch(0.205 0 0);
+
+  --surface-subtle: oklch(0.205 0 0);
+  /* 立体表現（ダーク）。明るい面を弱め、暗い影を強める */
+  --raised-light: oklch(0.42 0.02 262 / 0.5);
+  --raised-dark: oklch(0.08 0.01 262 / 0.7);
+  --raised-shadow:
+    -2px -2px 5px var(--raised-light), 3px 3px 7px var(--raised-dark);
+  --raised-shadow-hover:
+    -1px -1px 4px var(--raised-light), 4px 4px 10px var(--raised-dark);
+  --pressed-shadow:
+    inset 2px 2px 5px var(--raised-dark), inset -2px -2px 5px var(--raised-light);
+  --raised-shadow-subtle:
+    -1px -1px 2px var(--raised-light), 1px 1px 3px var(--raised-dark);
+  /*
+    色付きの面（ダーク）。
+    **暗い影は暗い背景の上では見えない。** 中立色のボタンが成立しているのは
+    面自体が背景より明るく、左上のハイライトが乗るため。色付きの面では
+    外側の影に頼れないので、面の内側の縁で立体を作る。
+    上辺の明るいベベルと下辺の暗いベベルを、ライトより強めに入れる。
+  */
+  --raised-shadow-on-color:
+    inset 0 1px 0 oklch(1 0 0 / 0.35), inset 0 -2px 0 oklch(0 0 0 / 0.35),
+    0 2px 6px oklch(0 0 0 / 0.55);
+  --raised-shadow-on-color-hover:
+    inset 0 1px 0 oklch(1 0 0 / 0.45), inset 0 -2px 0 oklch(0 0 0 / 0.35),
+    0 3px 9px oklch(0 0 0 / 0.6);
+  /*
+    罫線（ダーク）。
+    ライトと逆で、**ここでは彫りが効く。** 地（0.145）より暗い線を引き、
+    その下に淡い光を置くと溝になる。--border（白の10%）をそのまま使うと
+    線が地より明るくなり、掘るのではなく貼り付けたように見える。
+  */
+  --rule-line: oklch(0 0 0 / 0.45);
+  --rule-highlight: oklch(1 0 0 / 0.07);
+
+  /* Liquid Glass（ダーク） */
+  --glass-bg: oklch(0.22 0.01 262 / 0.72);
+  --glass-border: oklch(1 0 0 / 0.12);
+  --glass-blur: 16px;
+
+  --surface-subtle: oklch(0.19 0.01 262);
+
+  /*
+    カレンダーの赤。
+    ダークでも明度を上げすぎない。上げると白文字とのコントラストが
+    4.5:1 を割る（実測 3.67:1 だった）。紙の面は白のままなので、
+    帯だけ明るくする必要もない。
+  */
+  --calendar-accent: oklch(0.53 0.2 27);
+  --calendar-accent-foreground: oklch(0.99 0 0);
+  /* 紙の面はダークでも白地のまま。テーマに追従させない */
+  --calendar-paper: oklch(0.97 0 0);
+  --calendar-paper-foreground: oklch(0.2 0 0);
+  --calendar-paper-muted: oklch(0.45 0 0);
+
+  /* 帯はライトと同じ。紙が白のままなので、明るくする理由がない */
+  --candidate-accent: oklch(0.52 0.105 221.7);
+  --candidate-accent-foreground: oklch(0.99 0 0);
+  /* 後ろに覗く紙。**紙面より一段暗くする** — 縁だけでは白地に沈んで見えない */
+  --candidate-stack: oklch(0.88 0 0);
+
+}
+
+/* ---------------------------------------------------------------------------
+   デザイン言語のユーティリティ
+
+   docs/DESIGN_GUIDELINES.md に対応する。適用面を混ぜないこと:
+     .raised / .pressed → 操作可能な要素のみ
+     .glass             → 背景の上に浮いている層のみ
+   カードなど「読ませる面」にはどちらも使わない。
+   --------------------------------------------------------------------------- */
+
+/* 押し出し。ボタン・トグルなど操作要素に使う */
+.raised {
+  box-shadow: var(--raised-shadow);
+}
+/* 色付きの面の押し出し。primary / state / destructive に使う */
+.raised-on-color {
+  box-shadow: var(--raised-shadow-on-color);
+}
+.raised-on-color:hover:not(:disabled) {
+  box-shadow: var(--raised-shadow-on-color-hover);
+}
+.raised-on-color:active:not(:disabled) {
+  box-shadow: var(--pressed-shadow);
+}
+
+/*
+  押せないボタンから影を外す。影が残っていると押せるように見え、
+  押しても反応しないことに気づくまで戸惑わせる。
+*/
+.raised:disabled,
+.raised-on-color:disabled,
+.raised-subtle:disabled {
+  box-shadow: none;
+}
+
+/* 弱い押し出し。選択肢が横に並ぶ部品に使う */
+.raised-subtle {
+  box-shadow: var(--raised-shadow-subtle);
+}
+.raised-subtle:hover:not(:disabled) {
+  box-shadow: var(--raised-shadow);
+}
+.raised:hover:not(:disabled) {
+  box-shadow: var(--raised-shadow-hover);
+}
+/* 押し込み。active 状態と、トグルの溝に使う */
+.raised:active:not(:disabled),
+.pressed {
+  box-shadow: var(--pressed-shadow);
+}
+
+/* 影が出ない環境（強制カラー・高コントラスト）では境界で代替する。
+   押せることを影だけに依存させないため。 */
+@media (forced-colors: active) {
+  .raised,
+  .raised-on-color,
+  .raised-subtle,
+  .pressed {
+    box-shadow: none;
+    border: 1px solid ButtonBorder;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   罫線
+
+   **区切りは必ず線で引く。** 影（ハイライト）は彫りを足すだけの飾りで、
+   強制カラーや高コントラストで消えても区切りは失われない。
+
+     .rule-y … 節の上下と、子どうしの間に引く（項目の並びを囲う）
+     .rule-t … 上の縁だけに引く
+
+   上下を開けたままにすると、並びがどこから始まってどこで終わるのかが
+   最初と最後の行だけ曖昧になる。
+   --------------------------------------------------------------------------- */
+.rule-t,
+.rule-y,
+.rule-y > * + * {
+  border-top: 1px solid var(--rule-line);
+  box-shadow: inset 0 1px 0 var(--rule-highlight);
+}
+.rule-y {
+  border-bottom: 1px solid var(--rule-line);
+  /* 下の縁のハイライトは節の外側に落とす（線の下が光る、で向きを揃える） */
+  box-shadow:
+    inset 0 1px 0 var(--rule-highlight),
+    0 1px 0 var(--rule-highlight);
+}
+
+/* 浮いている層。ヘッダー・モーダル・メニュー・モバイルのアクションバー */
+.glass {
+  background-color: var(--card);
+  border: 1px solid var(--glass-border);
+}
+
+/*
+  ぼかしは対応ブラウザにのみ適用する。
+
+  標準プロパティと -webkit- を並べて書くと、ビルド時（Lightning CSS）に
+  -webkit- だけへ畳まれることがある。Firefox は -webkit-backdrop-filter を
+  解釈しないため、それだとぼかしが効かないうえ半透明だけが残って読みにくくなる。
+  @supports で囲むと畳まれずに残る。
+
+  非対応ブラウザでは上の不透明な背景のままになる（透けたまま読めなくならない）。
+*/
+@supports (backdrop-filter: blur(1px)) {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  }
+}
+
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    background-color: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   読み物ページの本文
+   ------------------------------------------------------------------------- */
+
+/*
+  利用規約・プライバシーポリシー・Markdown解説のような**読ませるだけの面**。
+  typography プラグイン（`prose`）の色をセマンティックトークンへ寄せる。
+
+  **ここで色を直書きしない。** プラグインの既定色は固定のグレーで、
+  ダークにすると地は暗いのに本文だけ濃いグレーのまま残る。トークンを
+  差せば、テーマの切り替えに本文も付いてくる。
+
+  立体表現は付けない（docs/DESIGN_GUIDELINES.md：読ませる面はフラット）。
+*/
+.prose-content {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--border);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}

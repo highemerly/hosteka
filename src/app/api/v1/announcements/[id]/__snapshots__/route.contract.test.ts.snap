@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/announcements/[id] > 公開済みで本文のあるものを返す 1`] = `
+{
+  "body": {
+    "data": {
+      "body": "## 変わったこと
+
+- 予定が見やすくなりました",
+      "id": 1,
+      "pinnedUntil": null,
+      "publishedAt": "2026-06-14T00:00:00.000Z",
+      "title": "カレンダーの改善",
+      "type": "info",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/announcements/[id] > 無いものは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "お知らせが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;

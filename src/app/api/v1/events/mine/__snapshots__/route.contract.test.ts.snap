@@ -1,0 +1,59 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/events/mine > 一覧とページ情報を返す 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "attendees": [],
+        "attendingCount": 3,
+        "creator": {
+          "avatar": null,
+          "displayName": "テスト太郎",
+          "id": "user_1",
+          "platform": "mastodon",
+          "server": "example.social",
+          "username": "taro",
+        },
+        "endDate": null,
+        "fee": null,
+        "hasEndTime": false,
+        "hasStartTime": true,
+        "hashtags": [
+          "fediverse交流会",
+        ],
+        "id": "evt_1",
+        "location": "渋谷",
+        "maxParticipants": 40,
+        "organization": null,
+        "registrationDeadline": null,
+        "startDate": "2026-09-12T10:00:00.000Z",
+        "status": "active",
+        "title": "Fediverse 交流会",
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 12,
+      "total": 1,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/events/mine > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;

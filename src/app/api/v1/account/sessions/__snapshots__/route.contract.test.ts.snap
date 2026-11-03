@@ -1,0 +1,77 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DELETE /api/v1/account/sessions > この端末以外を失効させる 1`] = `
+{
+  "body": {
+    "data": {
+      "revoked": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`DELETE /api/v1/account/sessions > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`GET /api/v1/account/sessions > ログイン中のセッションを返す。いまの端末には印が付く 1`] = `
+{
+  "body": {
+    "data": {
+      "now": "2026-09-10T00:00:00.000Z",
+      "sessions": [
+        {
+          "country": "JP",
+          "createdAt": "2026-08-01T00:00:00.000Z",
+          "current": true,
+          "expiresAt": "2026-10-01T00:00:00.000Z",
+          "id": "sess_user",
+          "ipAddress": "203.0.113.5",
+          "lastUsedAt": "2026-09-10T00:00:00.000Z",
+          "region": "Tokyo",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        },
+        {
+          "country": null,
+          "createdAt": "2026-08-01T00:00:00.000Z",
+          "current": false,
+          "expiresAt": "2026-10-01T00:00:00.000Z",
+          "id": "sess_other",
+          "ipAddress": null,
+          "lastUsedAt": "2026-09-09T15:00:00.000Z",
+          "region": null,
+          "userAgent": null,
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/account/sessions > 未ログインでは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;

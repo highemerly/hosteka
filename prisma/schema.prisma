@@ -1,0 +1,558 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  // Prisma 7 の生成先はプロジェクト内。node_modules ではなくなったので
+  // .gitignore に入れてある（生成物をコミットしない）。
+  output   = "../src/generated/prisma"
+  // binaryTargets は書かない。Prisma 7 は Rust エンジンを積まず、
+  // クエリの組み立ては生成された TypeScript が行う。
+}
+
+datasource db {
+  provider = "postgresql"
+  // 接続先はここに書けない（Prisma 7 で禁止された）。
+  // CLI（migrate / studio）は prisma.config.ts、
+  // アプリは src/lib/prisma.ts のドライバアダプタが持つ。
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  username            String
+  displayName         String
+  avatar              String?
+  server              String
+  platform            String // "mastodon" or "misskey"
+  /// 相手のプラットフォームでの不変のID。**X と Discord だけが持つ。**
+  /// あの2つはユーザー名を変えられ、手放した名前を他人が取れるので、
+  /// `username@server` で照合すると名前を引き継いだ別人が前の持ち主の
+  /// アカウントに入る（`src/server/auth/hosted-user.ts`）。
+  /// Mastodon / Misskey / Pleroma はユーザー名を変えられないので null のまま。
+  platformUserId      String?
+  accessToken         String?
+  /// 投稿の権限を持つトークンか。**null は「分からない」**（この列より前に
+  /// 入ったユーザー）。分からない間は従来どおり、送ってみて断られたら
+  /// 入り直しへ案内する。false と分かっていれば書き始める前に案内できる。
+  hasWritePermission  Boolean?
+  lastTermsAcceptedAt DateTime? @db.Timestamptz(3)
+  lastLoginAt         DateTime? @db.Timestamptz(3)
+  ipAddresses         String?   @db.Text // JSON array of recent IP addresses (max 5)
+  isAdmin             Boolean   @default(false)
+  /// 通知をどこまで見たか。**行ごとの既読は持たない。**
+  /// これより後に起きた通知が未読（`Notification.occurredAt > notificationsSeenAt`）。
+  ///
+  /// **null 許容にしない。** null 分岐が未読数・畳み・一覧の3箇所に増えるだけで、
+  /// この列を足した時点では通知が1件も無いので、既存の行を now() で埋めても
+  /// 失われるものが無い。
+  notificationsSeenAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  /// 自己紹介（Markdown）。ユーザーページに出す
+  ///
+  /// **ここから下の4列は、この表で唯一「本人が書いたもの」。** ほかの列は
+  /// ログインのたびに相手のサーバーから同期している値なので、OAuth の
+  /// コールバック（`src/app/api/v1/auth/callback/*`）の `upsert` は
+  /// この4列に触れてはならない。触ると、ログインするたびに消える。
+  bio                 String?   @db.Text
+  /// 連絡先のメールアドレス。
+  ///
+  /// **公開プロフィールの応答には載せない。** ログイン中の閲覧者が
+  /// 押して初めて見えるもので、`GET /api/v1/users/[handle]/email` だけが返す
+  /// （`USER_PROFILE_PUBLIC_SELECT` に入れないこと）。
+  email               String?   @db.VarChar(254)
+  /// 他のSNSのID。JSON array（最大5）
+  /// `[{"platform":"mastodon","username":"alice","server":"mastodon.social"}]`
+  socialAccounts      String?   @db.Text
+  /// ホームページのURL。JSON array（最大2）
+  homepageUrls        String?   @db.Text
+
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  events               Event[]
+  participants         EventParticipant[]
+  preEvents            PreEvent[]
+  preEventParticipants PreEventParticipant[]
+  reports              Report[]
+  attendances          EventAttendance[]
+  createdAttendances   EventAttendance[]     @relation(name: "CreatedAttendance")
+  updatedAttendances   EventAttendance[]     @relation(name: "UpdatedAttendance")
+  createdOrganizations Organization[]
+  organizationAdmins   OrganizationAdmin[]
+  sessions             Session[]
+  /// 自分宛に届いた通知
+  notifications        Notification[]
+  /// 自分の操作が原因で他人に届いた通知。退会すると `actorId` が null になる
+  actedNotifications   Notification[]        @relation(name: "NotificationActor")
+  /// 停止されていれば、その記録。無ければ停止されていない
+  ban                  BannedUser?
+
+  @@unique([username, server])
+  @@unique([server, platformUserId])
+  @@map("users")
+}
+
+/// Mastodon / Pleroma のサーバーに登録した Hosteka の OAuth アプリ。
+///
+/// **ログインのたびに登録しない。** 以前は毎回 `POST /api/v1/apps` をしており、
+/// 利用者の「認証済みアプリ」に Hosteka がログインの回数だけ並んでいた。
+/// サーバー・コールバック先・権限の組ごとに1つ登録して使い回す
+/// （`src/server/auth/oauth-app.ts`）。
+model OauthApp {
+  id           String   @id @default(cuid())
+  /// "mastodon" | "pleroma"
+  platform     String
+  /// 小文字に正規化したホスト名
+  server       String
+  /// コールバック先。開発機と本番で違うので、キーに含める
+  redirectUri  String
+  /// 登録した権限。ログインで求める権限と同じ（Mastodon はアプリの権限を利用者に見せる）
+  scopes       String
+  clientId     String
+  /// 暗号化済み（`src/lib/crypto.ts`）
+  clientSecret String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([platform, server, redirectUri, scopes])
+  @@map("oauth_apps")
+}
+
+/// ログインセッション。
+///
+/// JWT は jose で署名され、検証自体はステートレスに行う（DBに触れない）。
+/// この行は「失効させられること」のためだけに存在する。
+/// 検証時の参照はプロセス内の失効キャッシュ（src/server/auth/revocation-cache.ts）が
+/// 引き受けるため、リクエスト毎のDBアクセスは発生しない。
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  expiresAt  DateTime  @db.Timestamptz(3)
+  /// null なら有効。値が入った時点で失効扱いになる
+  revokedAt  DateTime? @db.Timestamptz(3)
+  /// 書き込み増幅を避けるため、更新はセッションあたり最大1時間に1回に絞る
+  lastUsedAt DateTime  @default(now()) @db.Timestamptz(3)
+  userAgent  String?   @db.VarChar(255)
+  ipAddress  String?   @db.VarChar(64)
+  /// Cloudflare の訪問者位置ヘッダ（"Add visitor location headers"）。
+  /// CF を通さない経路では NULL。国は ISO 3166-1 alpha-2、地域は英語名
+  country    String?   @db.VarChar(2)
+  region     String?   @db.VarChar(64)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  /// 失効キャッシュの差分取得（revokedAt > watermark AND expiresAt > now）用
+  @@index([revokedAt, expiresAt])
+  /// 期限切れ行の定期削除用
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Event {
+  id                          String    @id @default(cuid())
+  title                       String    @db.VarChar(100)
+  description                 String?   @db.Text
+  hashtags                    String?   @db.Text // JSON array of hashtags (max 10)
+  startDate                   DateTime  @db.Timestamptz(3)
+  startTime                   String?
+  hasStartTime                Boolean   @default(false)
+  endDate                     DateTime? @db.Timestamptz(3)
+  endTime                     String?
+  hasEndTime                  Boolean   @default(false)
+  location                    String?   @db.VarChar(200)
+  maxParticipants             Int?
+  isAllowedForFediverse       Boolean   @default(true)
+  isAllowedForDiscord         Boolean   @default(false)
+  isAllowedForTwitter         Boolean   @default(false)
+  allowedFediverseServers     String?
+  isPublic                    Boolean   @default(true)
+  isHighlighted               Boolean   @default(true)
+  registrationDeadlineDate    DateTime? @db.Timestamptz(3)
+  registrationDeadlineTime    String?
+  hasRegistrationDeadlineTime Boolean   @default(false)
+  fee                         String?   @db.VarChar(200)
+  terms                       String?   @db.Text
+  relatedUrl                  String?   @db.VarChar(200)
+  allowMaybe                  Boolean   @default(false)
+  allowParticipationRequest   Boolean   @default(true)
+  isDisabled                  Boolean   @default(false)
+  status                      String    @default("active") // "active" | "cancelled"
+  createdAt                   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime  @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  creator        User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId      String
+  organization   Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId String?
+  participants   EventParticipant[]
+  optionGroups   EventOptionGroup[]
+  options        EventOption[]
+  reports        Report[]
+  attendances    EventAttendance[]
+
+  @@index([isPublic, isDisabled, startDate])
+  @@index([creatorId])
+  @@index([organizationId])
+  @@index([startDate])
+  @@map("events")
+}
+
+model EventParticipant {
+  id                 String    @id @default(cuid())
+  status             String    @default("attending") // "attending", "maybe", "not_attending", "cancelled", "participation_request"
+  comment            String?   @db.VarChar(300)
+  termsAccepted      Boolean   @default(false)
+  termsAcceptedAt    DateTime? @db.Timestamptz(3)
+  isOrganizer        Boolean   @default(false)
+  cancellationReason String? // "user_cancelled", "admin_cancelled", "auto_cancelled"
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  event           Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId         String
+  user            User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  groupSelections ParticipantGroupSelection[]
+
+  @@unique([eventId, userId])
+  @@index([userId, status])
+  @@index([eventId, status])
+  @@map("event_participants")
+}
+
+model EventOptionGroup {
+  id    String @id @default(cuid())
+  title String
+  /// "single" | "multiple" | "text"。**真偽値2つに分けない** —
+  /// 「複数選択できる自由入力」のような無い状態が作れてしまう。
+  /// "text" のグループは options を持たず、回答は
+  /// ParticipantGroupSelection.textAnswer に入る
+  responseType String   @default("single") @db.VarChar(20)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  event                 Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId               String
+  options               EventOption[]
+  participantSelections ParticipantGroupSelection[]
+
+  @@map("event_option_groups")
+}
+
+model EventOption {
+  id              String @id @default(cuid())
+  name            String
+  maxParticipants Int?
+  displayOrder    Int    @default(0)
+  eventId         String
+
+  // Relations
+  event              Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  group              EventOptionGroup         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId            String
+  participantOptions ParticipantGroupOption[]
+
+  @@map("event_options")
+}
+
+model ParticipantGroupSelection {
+  id String @id @default(cuid())
+  /// 自由入力（responseType = "text"）の回答。選択式のグループでは null
+  textAnswer String?  @db.VarChar(100)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  // Relations
+  participant   EventParticipant         @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId String
+  group         EventOptionGroup         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId       String
+  options       ParticipantGroupOption[]
+
+  @@unique([participantId, groupId])
+  @@map("participant_group_selections")
+}
+
+model ParticipantGroupOption {
+  id String @id @default(cuid())
+
+  // Relations
+  selection   ParticipantGroupSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  selectionId String
+  option      EventOption               @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId    String
+
+  @@unique([selectionId, optionId])
+  @@map("participant_group_options")
+}
+
+model PreEvent {
+  id                      String    @id @default(cuid())
+  title                   String    @db.VarChar(100)
+  description             String?   @db.Text
+  location                String?   @db.VarChar(200)
+  fee                     String?   @db.VarChar(200)
+  relatedUrl              String?   @db.VarChar(200)
+  terms                   String?   @db.Text
+  isAllowedForFediverse   Boolean   @default(true)
+  isAllowedForDiscord     Boolean   @default(false)
+  isAllowedForTwitter     Boolean   @default(false)
+  allowedFediverseServers String?
+  allowAutoRegistration   Boolean   @default(false)
+  isPublic                Boolean   @default(true)
+  isHighlighted           Boolean   @default(false)
+  isDisabled              Boolean   @default(false)
+  registrationDeadline    DateTime? @db.Timestamptz(3)
+  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  creator        User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId      String
+  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId String?
+  dateOptions    PreEventDateOption[]
+  participants   PreEventParticipant[]
+  reports        Report[]
+
+  @@index([isPublic, isDisabled, createdAt])
+  @@index([creatorId])
+  @@index([organizationId])
+  @@map("pre_events")
+}
+
+model PreEventDateOption {
+  id           String    @id @default(cuid())
+  startDate    DateTime  @db.Timestamptz(3)
+  endDate      DateTime? @db.Timestamptz(3)
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  preEvent     PreEvent              @relation(fields: [preEventId], references: [id], onDelete: Cascade)
+  preEventId   String
+  participants PreEventParticipant[]
+
+  @@map("pre_event_date_options")
+}
+
+model PreEventParticipant {
+  id                       String   @id @default(cuid())
+  status                   String // "available", "maybe", "unavailable"
+  comment                  String?  @db.VarChar(300)
+  autoRegisterWhenPromoted Boolean  @default(false)
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  preEvent     PreEvent           @relation(fields: [preEventId], references: [id], onDelete: Cascade)
+  preEventId   String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  dateOption   PreEventDateOption @relation(fields: [dateOptionId], references: [id], onDelete: Cascade)
+  dateOptionId String
+
+  @@unique([preEventId, userId, dateOptionId])
+  @@index([userId])
+  @@index([preEventId])
+  @@map("pre_event_participants")
+}
+
+model Report {
+  id         String    @id @default(cuid())
+  reason     String    @db.VarChar(500)
+  reportedAt DateTime  @default(now()) @db.Timestamptz(3)
+  status     String    @default("pending") // "pending", "resolved"
+  adminNote  String?   @db.Text
+  resolvedAt DateTime? @db.Timestamptz(3)
+
+  // Relations
+  reporter   User      @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String
+  event      Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    String?
+  preEvent   PreEvent? @relation(fields: [preEventId], references: [id], onDelete: Cascade)
+  preEventId String?
+
+  @@index([status, reportedAt])
+  @@map("reports")
+}
+
+/// BAN（停止）の記録。**この行があること自体が停止の状態。**
+///
+/// 以前の BAN は `users` の行を削除して名前だけをここに残す操作だった。
+/// そのため BAN の根拠になった通報も、主催していたものも、参加の記録も
+/// 一緒に消えて、`reason` しか残らなかった。いまは削除しない。
+model BannedUser {
+  id            String   @id @default(cuid())
+  username      String
+  server        String
+  platform      String
+  reason        String?
+  bannedAt      DateTime @default(now()) @db.Timestamptz(3)
+  bannedByAdmin String? // Admin user ID
+  /// 停止したユーザー。**削除方式だった頃の記録は null**（当人はもう居ない）。
+  /// 再登録を止める判定は今も username+server で行うので、null のままでも効く。
+  userId        String?  @unique
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([username, server])
+  @@map("banned_users")
+}
+
+model EventAttendance {
+  id           String   @id @default(cuid())
+  attendStatus String   @default("not_entered") // "present", "absent", "not_entered"
+  feeStatus    String   @default("not_entered") // "paid", "unpaid", "not_entered"
+  memo         String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  event       Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull, name: "CreatedAttendance")
+  createdById String?
+  updatedBy   User?   @relation(fields: [updatedById], references: [id], onDelete: SetNull, name: "UpdatedAttendance")
+  updatedById String?
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@map("event_attendances")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  relatedUrl  String?  @db.VarChar(500)
+  creatorId   String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  // Relations
+  creator   User?               @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  admins    OrganizationAdmin[]
+  events    Event[]
+  preEvents PreEvent[]
+
+  @@map("organizations")
+}
+
+model OrganizationAdmin {
+  id        String   @id @default(cuid())
+  role      String   @default("staff") // "admin" | "staff"
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_admins")
+}
+
+/// アプリ内の通知。**1行 = 1人が受け取る1件**（同じ出来事でも受信者ごとに行を作る）。
+///
+/// **文言をここに焼き込まない。** `kind` と `payload` から画面が組み立てる
+/// （`src/lib/notification-text.ts`）。焼き込むと、あとから言い回しを直しても
+/// 過去の行だけが古いまま残る。
+///
+/// 保存期間は90日（`src/server/services/purge-old-records.ts`）。
+///
+/// 運営から全員への告知（`/announcements`）とは別物。あちらは Markdown ファイル
+/// 由来で全閲覧者に同じものを出すので、閲覧者ごとのこのテーブルに混ぜない。
+model Notification {
+  id          String   @id @default(cuid())
+  /// 受け取る人
+  userId      String
+  /// 何が起きたか。`src/schemas/notification.ts` の `NotificationKind` が定義元。
+  /// "participation_requested" | "participation_registered" | "participation_cancelled"
+  /// | "participation_approved" | "participation_rejected" | "pre_event_answered"
+  /// | "event_updated" | "event_cancelled" | "pre_event_updated" | "pre_event_deleted"
+  /// | "organizer_assigned" | "organizer_unassigned" | "org_admin_added"
+  kind        String
+  /// "event" | "pre_event" | "org"
+  targetType  String
+  /// 対象のID。**外部キーにしない**（3つのテーブルを指すため）。
+  /// 対象が消えても行は残り、`payload` の写しで文言が成り立つ。
+  /// グループは slug ではなく id を入れる（slug は編集で変わる）
+  targetId    String
+  /// 原因になった人。退会したら null になる（行は残す）
+  actorId     String?
+  /// 表示に使う値の写し（JSON）。対象の名前、変わった項目など。**文ではなく値**を入れる
+  payload     String?  @db.Text
+  /// 畳む鍵。**null は「畳まない」** — Postgres の一意制約は NULL を別物として
+  /// 扱うので、null の行はいくつでも作れる。畳む種別では「受信者がその時点で
+  /// 持っていた既読位置」を入れる。既読位置が動けば鍵が変わる＝既読後の出来事は
+  /// 自動的に新しい行になる。**これが畳みの実装そのもの**で、if 文ではなく
+  /// 下の一意制約が保証する（`src/server/notifications/fold.ts`）
+  foldKey     String?
+  /// 行ができた時刻
+  createdAt   DateTime @db.Timestamptz(3)
+  /// 最後にその出来事が起きた時刻。畳んだときに更新する。並び順はこれ。
+  /// **未読の判定もこれ**（`occurredAt > users.notificationsSeenAt`）
+  occurredAt  DateTime @db.Timestamptz(3)
+  /// 畳んだ回数。1 なら畳んでいない
+  repeatCount Int      @default(1)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation(name: "NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  /// 畳み。**同時に走っても重複行ができないことを、この制約が保証する**
+  @@unique([userId, kind, targetType, targetId, foldKey])
+  /// 一覧・ベル・未読数のすべてがこの1本で足りる
+  @@index([userId, occurredAt])
+  /// 対象が消えたときの掃除
+  @@index([targetType, targetId])
+  /// 90日を過ぎた行の削除
+  @@index([createdAt])
+  /// 退会時の SetNull。Postgres は FK に索引を自動で作らない
+  @@index([actorId])
+  @@map("notifications")
+}
+
+/// 運営から全員へのお知らせ。管理者が `/admin/announcements` から作る。
+///
+/// **通知（`notifications`）とは別物。** あちらは一人ひとりに宛てた出来事の記録で、
+/// こちらは全閲覧者に同じものを出す掲示。混ぜない。
+///
+/// 以前はファイル（`src/announcements/*.md`）だった。出すたびにデプロイが要り、
+/// バナーに出す期間も持てなかったので DB に移した。
+model Announcement {
+  /// 連番。**閉じたバナーを Cookie（`ht-ann`）に並べて持つので、短いほうがよい**
+  /// （cuid だと1件25文字、連番なら数文字）
+  id          Int       @id @default(autoincrement())
+  /// 重要度: "warning" | "info" | "low"。定義元は `src/schemas/announcement.ts`。
+  /// **"low" はヘッダー下のバナーに一切出さない**（一覧と詳細だけ）
+  type        String    @default("info") @db.VarChar(20)
+  title       String    @db.VarChar(200)
+  /// 本文（Markdown）。**空なら詳細ページを作らない** — 一覧では題名だけを出し、
+  /// 押しても何も増えないページへ連れて行かない
+  body        String?   @db.Text
+  /// 公開する日時。`publishedAt <= now` で一覧とバナーに現れる（予約できる）
+  publishedAt DateTime  @db.Timestamptz(3)
+  /// バナーへの掲載を終える日時。**null は「公開から既定の日数で自動的に降ろす」**
+  /// （`DEFAULT_BANNER_DAYS`）。降ろしたあとも一覧には残る
+  pinnedUntil DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  /// 一覧（公開済みを新しい順）とバナー（公開済みのうち掲載中）の両方がこの1本
+  @@index([publishedAt])
+  @@map("announcements")
+}

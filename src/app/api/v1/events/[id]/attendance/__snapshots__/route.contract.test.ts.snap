@@ -1,0 +1,151 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/events/[id]/attendance > 主催者・幹事でなければ403 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "イベントの出欠の閲覧は主催者・幹事のみ可能です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 403,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/attendance > 参加者と記録を1行にまとめて返す 1`] = `
+{
+  "body": {
+    "data": {
+      "event": {
+        "fee": "3,000円",
+        "id": "evt_1",
+        "title": "交流会",
+      },
+      "rows": [
+        {
+          "attendStatus": "present",
+          "comment": "遅れます",
+          "feeStatus": "paid",
+          "memo": "お釣り渡した",
+          "options": [
+            {
+              "names": [
+                "肉",
+              ],
+              "title": "食事",
+            },
+          ],
+          "participantStatus": "attending",
+          "user": {
+            "avatar": null,
+            "displayName": "花子",
+            "id": "user_2",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "hanako",
+          },
+          "userId": "user_2",
+        },
+        {
+          "attendStatus": "not_entered",
+          "comment": null,
+          "feeStatus": "not_entered",
+          "memo": null,
+          "options": [],
+          "participantStatus": "maybe",
+          "user": {
+            "avatar": null,
+            "displayName": "花子",
+            "id": "user_3",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "hanako",
+          },
+          "userId": "user_3",
+        },
+      ],
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/attendance > 存在しないイベントは404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "イベントが見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`GET /api/v1/events/[id]/attendance > 未ログインは401 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "ログインが必要です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 401,
+}
+`;
+
+exports[`POST /api/v1/events/[id]/attendance > その人が参加者でなければ404 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "参加者が見つかりません",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 404,
+}
+`;
+
+exports[`POST /api/v1/events/[id]/attendance > 保存した結果を返す 1`] = `
+{
+  "body": {
+    "data": {
+      "attendStatus": "present",
+      "feeStatus": "not_entered",
+      "memo": null,
+      "userId": "user_2",
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
+
+exports[`POST /api/v1/events/[id]/attendance > 知らない出欠の値は400 1`] = `
+{
+  "body": {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "details": [
+        {
+          "message": "Invalid option: expected one of "present"|"absent"|"not_entered"",
+          "path": "attendStatus",
+        },
+      ],
+      "message": "リクエストボディの内容が不正です",
+      "requestId": "<uuid>",
+    },
+  },
+  "contentType": "application/json",
+  "status": 400,
+}
+`;

@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/notifications/summary > 未読の数と直近の数件を1本で返す 1`] = `
+{
+  "body": {
+    "data": {
+      "recent": [
+        {
+          "actor": {
+            "avatar": null,
+            "displayName": "テスト花子",
+            "id": "user_9",
+            "platform": "mastodon",
+            "server": "example.social",
+            "username": "hanako",
+          },
+          "category": "organizer",
+          "href": "/events/evt_1",
+          "id": "ntf_1",
+          "kind": "participation_requested",
+          "occurredAt": "2026-09-18T06:00:00.000Z",
+          "payload": {
+            "title": "花見の会",
+          },
+          "repeatCount": 1,
+          "targetId": "evt_1",
+          "targetType": "event",
+          "unread": true,
+        },
+      ],
+      "unread": 3,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;
