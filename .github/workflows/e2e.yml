@@ -1,8 +1,8 @@
 name: E2E
 
-# 本番と同じイメージを起動して外から叩くスモーク。ci.yml（ブランチ push・差分で必要なときだけ。
-# イメージはここでビルドし、push しない）と docker-build.yml（タグ push・push 済みのイメージで）から呼ぶ。
-# 手順は手元でも同じ（e2e/compose.yml の冒頭）。
+# 本番と同じイメージを、Postgres と偽 Fediverse サーバーと一緒に起動して Playwright を回す。
+# ci.yml（ブランチ push・差分で必要なときだけ。イメージはここでビルドし、push しない）と
+# docker-build.yml（タグ push・push 済みのイメージで）から呼ぶ。手順は手元でも同じ（e2e/compose.yml の冒頭）。
 on:
   workflow_call:
     inputs:
@@ -49,15 +49,43 @@ jobs:
           tags: hosteka:e2e
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
 
-      - name: Start app and database
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # Playwright を使うだけなので、ネイティブビルドは要らない
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # 偽 Fediverse サーバーの証明書は毎回作る（秘密鍵をリポジトリに置かない）
+      - name: Generate certificates for fake Fediverse servers
+        run: e2e/fakeverse/gen-certs.sh
+
+      - name: Start app, database and fake Fediverse servers
         run: docker compose -f e2e/compose.yml up -d --wait
 
       - name: Apply migrations
         run: docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
 
-      - name: Smoke
-        run: node e2e/smoke.mjs
+      - name: Run E2E
+        run: npx playwright test -c e2e/playwright.config.ts
 
-      - name: Show app logs
+      - name: Collect logs on failure
         if: failure()
-        run: docker compose -f e2e/compose.yml logs app
+        run: docker compose -f e2e/compose.yml logs app fakeverse > e2e/app.log 2>&1 || true
+
+      - name: Upload E2E artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/app.log
+          if-no-files-found: ignore

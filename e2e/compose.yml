@@ -1,14 +1,23 @@
-# E2E スモーク用。本番と同じイメージを、使い捨ての Postgres と一緒に起動する。
-# CI でも手元でも同じ手順で動かす（docs/development.md「E2E スモーク」）。
+# E2E 用。本番と同じイメージを、使い捨ての Postgres と偽 Fediverse サーバーと一緒に起動する。
+# CI でも手元でも同じ手順で動かす（docs/development.md「E2E」）。
 #
+#   e2e/fakeverse/gen-certs.sh
 #   docker compose -f e2e/compose.yml up -d --build --wait
 #   docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
-#   node e2e/smoke.mjs
+#   npx playwright test -c e2e/playwright.config.ts
 #   docker compose -f e2e/compose.yml down -v
 #
 # CI はイメージを先に作って読み込ませ（hosteka:e2e）、--build を付けずに起動する。
 # タグ時は push 済みのイメージを E2E_IMAGE で渡す。
 name: hosteka-e2e
+
+# 偽 Fediverse サーバーは TEST-NET（文書用）に置く。外向きの通信のガード
+# （src/server/auth/outbound-host.ts）はプライベートアドレスを断るが、TEST-NET は通す。
+networks:
+  e2e:
+    ipam:
+      config:
+        - subnet: 198.51.100.0/24
 
 services:
   postgres:
@@ -31,6 +40,26 @@ services:
     volumes:
       - ../prisma/migrations:/migrations:ro
       - ./migrate.sh:/migrate.sh:ro
+    networks: [e2e]
+
+  # 偽の Mastodon / Misskey（e2e/fakeverse/server.mjs）。受けたリクエストは :58080 から取り出せる
+  fakeverse:
+    image: node:24-alpine
+    command: node /fakeverse/server.mjs
+    volumes:
+      - ./fakeverse/server.mjs:/fakeverse/server.mjs:ro
+      - ./fakeverse/certs:/certs:ro
+    ports:
+      - '58080:8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/health']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      e2e:
+        ipv4_address: 198.51.100.10
+        aliases: [mastodon.test, misskey.test]
 
   app:
     image: ${E2E_IMAGE:-hosteka:e2e}
@@ -40,11 +69,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      fakeverse:
+        condition: service_healthy
     environment:
       DATABASE_URL: 'postgresql://hosteka:hosteka@postgres:5432/hosteka'
       NEXTAUTH_URL: 'http://localhost:3000'
       NEXTAUTH_SECRET: 'e2e-secret-e2e-secret-e2e-secret-e2e'
       CRON_SECRET: 'e2e-cron-secret'
+      # 偽 Fediverse サーバーの証明書を信頼させる（gen-certs.sh が作る CA）
+      NODE_EXTRA_CA_CERTS: '/certs/ca.pem'
+    volumes:
+      - ./fakeverse/certs:/certs:ro
     ports:
       - '3000:3000'
     healthcheck:
@@ -53,3 +88,4 @@ services:
       interval: 2s
       timeout: 5s
       retries: 60
+    networks: [e2e]
