@@ -60,6 +60,25 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 **変更後は `npm test` / `npm run lint` / `npm run typecheck` の3つを通すこと。** これが CI のゲートと同一。
 
+## E2E スモーク
+
+PR（全ブランチへの push）で、本番と同じイメージをビルドして起動し、外から叩く
+（[e2e.yml](../.github/workflows/e2e.yml)。イメージは push しない）。見るのは
+ユニットテストに見えないものだけ: 主要なページと API が 200 を返すこと、
+マイグレーションを当てた空の DB で API が応答すること、キャッシュのヘッダ。
+画面の操作とリトライは入れない。中身は [e2e/smoke.mjs](../e2e/smoke.mjs)。
+
+手元でも同じ手順で動く:
+```bash
+docker compose -f e2e/compose.yml up -d --build --wait
+docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
+node e2e/smoke.mjs
+docker compose -f e2e/compose.yml down -v
+```
+
+マイグレーションは SQL を psql で流す（本番イメージは Prisma の CLI を積まない）。
+必須チェックにはしていない（所要時間と安定性を見てから決める）。
+
 ## リリース
 
 1. バージョンの bump もブランチ → PR でマージする。マージ後の main にタグを打って push する

@@ -1,0 +1,45 @@
+name: E2E
+
+# 本番と同じイメージを PR でもビルドし（push はしない）、起動して外から叩く。
+# ビルドだけが落ちる・起動だけが落ちる類（クライアントのチャンクに生成クライアントが
+# 入る、依存の更新で standalone が壊れる等）を、タグを打つ前に見つける。
+# 手順は手元でも同じ（e2e/compose.yml の冒頭）。
+on:
+  workflow_call:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # docker-build.yml と同じキャッシュを使う。main への push で温まったものを
+      # ブランチから読める（GitHub のキャッシュは既定ブランチのものを共有する）
+      - name: Build production image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: hosteka:e2e
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start app and database
+        run: docker compose -f e2e/compose.yml up -d --wait
+
+      - name: Apply migrations
+        run: docker compose -f e2e/compose.yml exec -T postgres sh /migrate.sh
+
+      - name: Smoke
+        run: node e2e/smoke.mjs
+
+      - name: Show app logs
+        if: failure()
+        run: docker compose -f e2e/compose.yml logs app
