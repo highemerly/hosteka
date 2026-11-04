@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 
 import { prisma } from '@/lib/prisma'
 import { announcementId } from '@/schemas/announcement'
+import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 const NOT_FOUND: Metadata = {
   title: 'お知らせ - Hosteka',
@@ -35,7 +36,7 @@ export async function getAnnouncementMetadata(rawId: string): Promise<Metadata> 
   const title = `${announcement.title} - Hosteka`
   return {
     title,
-    openGraph: { siteName: 'Hosteka', title, type: 'article', locale: 'ja_JP' },
-    twitter: { card: 'summary', title },
+    openGraph: { siteName: 'Hosteka', title, type: 'article', locale: 'ja_JP', images: defaultOgImages() },
+    twitter: { card: twitterCard(defaultOgImages()), title },
   }
 }

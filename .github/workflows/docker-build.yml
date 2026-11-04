@@ -16,6 +16,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # 公開URL。静的なページにリンクカードの画像の絶対URLを焼き込むため、ビルドのときに渡す
+  # （e2e.yml のブランチのビルドも同じ値を渡す）
+  PUBLIC_URL: https://hosteka.piyo.me
   K8S_REPO: highemerly/k8sg1-repo
   # 同じイメージを使う prd のマニフェスト（スペース区切り）
   K8S_MANIFEST_PATHS: "manifests/hosteka/prd/web.yaml"
@@ -128,6 +131,7 @@ jobs:
           context: .
           target: runner
           platforms: linux/amd64
+          build-args: NEXTAUTH_URL=${{ env.PUBLIC_URL }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

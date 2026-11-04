@@ -166,6 +166,10 @@ PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-c
   長く持たせ、版が違えば作らずに今の版へリダイレクトする（描画は重い）。**編集しなければ変わらない値だけを
   載せる**（参加者の数などを載せると古いまま残る）。非公開・無効化には題名を含まない共通の画像を返す。
   色は `server/og/render.tsx` に sRGB で直書きしている（satori は CSS 変数も oklch も読めない）
+- **イベント以外のページは、サイト共通の画像（`/og/default`）を載せる。** `openGraph` を持つページは
+  root layout の既定を丸ごと上書きするので、必ず `defaultOgImages()` を通す（`lib/og/default.ts`）
+- **静的なページの HTML は Docker のビルド中に作られる。** 絶対URLを焼き込むため、公開URLはビルド引数の
+  `NEXTAUTH_URL` で渡す（Dockerfile の `ARG`、docker-build.yml の `PUBLIC_URL`）。渡さなければ画像を載せない
 
 ## テストと CI（重要・必ず守ること）
 

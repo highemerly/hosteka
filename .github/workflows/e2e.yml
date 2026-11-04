@@ -45,6 +45,8 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
+          # 本番と同じイメージにする（docker-build.yml の PUBLIC_URL と同じ値）
+          build-args: NEXTAUTH_URL=https://hosteka.piyo.me
           load: true
           tags: hosteka:e2e
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache

@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { toJST } from '@/lib/event-date-utils'
 import { missingMetadata, privateMetadata, UNLISTED_ROBOTS } from './hidden'
+import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -79,7 +80,9 @@ export async function getPreEventMetadata(id: string): Promise<Metadata> {
       description,
       type: 'website',
       locale: 'ja_JP',
+      // 日程調整の専用の画像を作るまでは、サイト共通の画像
+      images: defaultOgImages(),
     },
-    twitter: { card: 'summary', title: preEvent.title, description },
+    twitter: { card: twitterCard(defaultOgImages()), title: preEvent.title, description },
   }
 }

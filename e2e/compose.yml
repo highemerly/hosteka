@@ -66,6 +66,9 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      # 静的なページに焼き込む公開URL（CI は本番の URL でビルドする。e2e はどちらでも通る）
+      args:
+        NEXTAUTH_URL: 'http://localhost:3000'
     depends_on:
       postgres:
         condition: service_healthy
