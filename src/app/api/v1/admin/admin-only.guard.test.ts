@@ -46,14 +46,6 @@ const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 const API_ROOT = join(process.cwd(), 'src', 'app', 'api')
 const ADMIN_ROOT = join(API_ROOT, 'v1', 'admin')
 
-/** `/api/v1/admin` の下で、管理者以外の認証モードを意図して使うもの */
-const NOT_ADMIN_AUTH: Record<string, { auth: AuthMode; reason: string }> = {
-  'purge-old-records/route.ts': {
-    auth: 'cron',
-    reason: 'k8s の CronJob が叩く。人のログインを持てないので CRON_SECRET で確かめる',
-  },
-}
-
 function routeFiles(dir: string): string[] {
   return readdirSync(dir)
     .sort()
@@ -110,20 +102,16 @@ beforeEach(() => {
 })
 
 describe('管理用 API の宣言', () => {
-  it('/api/v1/admin の下は、除外したものを除いてすべて auth: admin', async () => {
+  /*
+    **例外は置かない。** cron が叩く口は `/api/v1/cron` に置く（`auth: 'cron'`）。
+    ここに混ぜると、管理者専用のつもりで読んだ人を迷わせる。
+  */
+  it('/api/v1/admin の下は、すべて auth: admin', async () => {
     const admin = (await endpoints()).filter((e) => e.file.startsWith(ADMIN_ROOT + '/'))
     expect(admin.length).toBeGreaterThan(0)
 
     for (const e of admin) {
-      const expected = NOT_ADMIN_AUTH[relative(ADMIN_ROOT, e.file)]?.auth ?? 'admin'
-      expect(e.auth, label(e)).toBe(expected)
-    }
-  })
-
-  it('除外の一覧に、もう無いルートが残っていない', () => {
-    const files = routeFiles(ADMIN_ROOT).map((f) => relative(ADMIN_ROOT, f))
-    for (const file of Object.keys(NOT_ADMIN_AUTH)) {
-      expect(files, file).toContain(file)
+      expect(e.auth, label(e)).toBe('admin')
     }
   })
 })

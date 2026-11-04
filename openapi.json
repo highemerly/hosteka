@@ -1254,37 +1254,6 @@
         ]
       }
     },
-    "/api/v1/admin/purge-old-records": {
-      "post": {
-        "x-auth": "cron",
-        "responses": {
-          "200": {
-            "description": "成功。単体は `{ data }`、一覧は `{ data, meta }`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Envelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/UNAUTHENTICATED"
-          },
-          "500": {
-            "$ref": "#/components/responses/INTERNAL"
-          },
-          "503": {
-            "$ref": "#/components/responses/SERVICE_UNAVAILABLE"
-          }
-        },
-        "security": [
-          {
-            "cronToken": []
-          }
-        ]
-      }
-    },
     "/api/v1/admin/reports": {
       "get": {
         "x-auth": "admin",
