@@ -25,8 +25,8 @@ import { MAX_STORED_IPS } from '@/lib/user-tracking'
  * 90日より前の「イベントが編集されました」を読み返す人もいないので、
  * **新しい cron を増やさずここに相乗りさせる**。
  *
- * cron から定期実行する（`POST /api/v1/admin/purge-old-records`、
- * または `npm run purge:old-records`）。
+ * 定期的な後片付け（`server/services/maintenance.ts`）の一部として、2時間おきに回る
+ * （`POST /api/v1/cron/maintenance`、または `npm run cron:maintenance`）。
  */
 
 export const RETENTION_DAYS = 90

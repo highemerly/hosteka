@@ -2128,6 +2128,37 @@
         }
       }
     },
+    "/api/v1/cron/maintenance": {
+      "post": {
+        "x-auth": "cron",
+        "responses": {
+          "200": {
+            "description": "成功。単体は `{ data }`、一覧は `{ data, meta }`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UNAUTHENTICATED"
+          },
+          "500": {
+            "$ref": "#/components/responses/INTERNAL"
+          },
+          "503": {
+            "$ref": "#/components/responses/SERVICE_UNAVAILABLE"
+          }
+        },
+        "security": [
+          {
+            "cronToken": []
+          }
+        ]
+      }
+    },
     "/api/v1/dashboard": {
       "get": {
         "x-auth": "required",

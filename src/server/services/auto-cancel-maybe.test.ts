@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/prisma', async () => ({ prisma: (await import('@/test/contract')).prismaMock }))
 
 import { prismaMock, resetPrismaMock } from '@/test/contract'
-import { autoCancelMaybeForEvent } from './auto-cancel-maybe'
+import { autoCancelMaybeForAll, autoCancelMaybeForEvent } from './auto-cancel-maybe'
 
 beforeEach(resetPrismaMock)
 
@@ -66,5 +66,27 @@ describe('autoCancelMaybeForEvent', () => {
     const result = await autoCancelMaybeForEvent('ev_1', new Date('2026-03-02T00:00:00Z'))
     expect(result).toBeNull()
     expect(prismaMock.eventParticipant.updateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('autoCancelMaybeForAll', () => {
+  /*
+    締切のあるイベントを過去の分まで全部読むと、増えるほど遅くなる。
+    「締切の日付が今日以前で、未定の人がいる」ものだけを読む。
+  */
+  it('締切の日付が過ぎていて、未定の人がいるイベントだけを読む', async () => {
+    const now = new Date('2026-11-20T12:00:00+09:00')
+    prismaMock.event.findMany.mockResolvedValue([])
+
+    await autoCancelMaybeForAll(now)
+
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith({
+      where: {
+        registrationDeadlineDate: { not: null, lte: now },
+        isDisabled: false,
+        participants: { some: { status: 'maybe' } },
+      },
+      select: { id: true },
+    })
   })
 })

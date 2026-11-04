@@ -1,14 +1,12 @@
 import { defineRoute } from '@/server/http/define-route'
-import { purgeOldRecords } from '@/server/services/purge-old-records'
+import { runMaintenance } from '@/server/services/maintenance'
 
 /**
- * 保存期間（90日）を過ぎたセッション履歴と通知を消す。
- *
- * cron から定期実行する。k8s の CronJob が `CRON_SECRET` を添えて叩く
- * （`k8sg1` の `manifests/hosteka/prd/cronjob.yaml`）。
- * 手元からは `npm run purge:old-records` でも同じ処理を走らせられる。
+ * **移行中の古い口。** 定期的な後片付けは `POST /api/v1/cron/maintenance` に移した。
+ * k8s の CronJob がまだこちらを叩いているあいだも「未定」のキャンセルまで回るよう、
+ * 中身は同じものを呼ぶ。CronJob を新しい口へ替えたら（k8sg1）、このルートは消す。
  */
 export const POST = defineRoute({
   auth: 'cron',
-  handler: async () => purgeOldRecords(),
+  handler: async () => runMaintenance(),
 })

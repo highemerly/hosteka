@@ -95,7 +95,8 @@ PUT（更新）になる。画面は `viewer.participation` が `null` かどう
 | 経路 | いつ |
 |---|---|
 | `GET /api/v1/events/[id]`（`after()`） | 詳細を開いたとき。表示のための保険 |
-| `POST /api/v1/events/auto-cancel-maybe` | cron から定期実行（一括） |
+| `POST /api/v1/cron/maintenance` | 2時間おきの定期的な後片付け（`server/services/maintenance.ts`）。誰も詳細を開かないイベントも片付く |
+| `POST /api/v1/events/auto-cancel-maybe` | 管理者が手で一括実行 |
 | `POST /api/v1/events/[id]/auto-cancel-maybe` | 個別に手動実行 |
 
 いずれも `updateMany` で冪等。同時に走っても、実行されなくても壊れない。
