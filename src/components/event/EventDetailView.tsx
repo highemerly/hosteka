@@ -29,6 +29,7 @@ import {
   type DetailVariant,
 } from '@/components/attendable/DetailParts'
 import { formatJstDateTime } from '@/lib/jst'
+import { formatSchedule } from '@/lib/event-schedule'
 import { userProfilePath } from '@/lib/user-handle'
 
 import { resolveLocation } from './location'
@@ -62,34 +63,6 @@ import { buildAnypostContactUrl, canMention } from './share-targets'
  * 灰色に落とすとプレビューとして役に立たなくなる。
  */
 export type EventDetailVariant = DetailVariant
-
-/** JST で「2026年9月12日（土）19:00 〜 22:00」の形にする */
-export function formatSchedule(e: EventDetailDto): string {
-  const fmt = (iso: string, withTime: boolean) =>
-    new Date(iso).toLocaleString('ja-JP', {
-      timeZone: 'Asia/Tokyo',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'short',
-      ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
-    })
-
-  const start = fmt(e.startDate, e.hasStartTime)
-  if (!e.endDate) return start
-
-  const sameDay =
-    new Date(e.startDate).toDateString() === new Date(e.endDate).toDateString()
-  if (sameDay && e.hasEndTime) {
-    const endTime = new Date(e.endDate).toLocaleString('ja-JP', {
-      timeZone: 'Asia/Tokyo',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    return `${start} 〜 ${endTime}`
-  }
-  return `${start} 〜 ${fmt(e.endDate, e.hasEndTime)}`
-}
 
 /**
  * 題名の下に並ぶ参加条件。締切・定員・参加できるアカウント・参加規約。
