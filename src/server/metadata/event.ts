@@ -2,7 +2,9 @@ import 'server-only'
 
 import type { Metadata } from 'next'
 
+import { getBaseUrl } from '@/lib/base-url'
 import { prisma } from '@/lib/prisma'
+import { OG_SIZE } from '@/lib/og/size'
 import { toJST } from '@/lib/event-date-utils'
 import { missingMetadata, privateMetadata, UNLISTED_ROBOTS } from './hidden'
 
@@ -28,6 +30,7 @@ export async function getEventMetadata(id: string): Promise<Metadata> {
       isDisabled: true,
       isPublic: true,
       isHighlighted: true,
+      updatedAt: true,
     },
   })
 
@@ -75,6 +78,18 @@ export async function getEventMetadata(id: string): Promise<Metadata> {
     description = `${description} ${eventInfo.join(' ')}`
   }
 
+  /*
+    リンクカードの画像（`app/og/events/[id]`）。**絶対URLで書く**（クローラーは相対URLを
+    解決しない）。このページはリクエストのたびにメタデータを作るので、実行時の URL が使える。
+    版（updatedAt）を付けて、編集したら別の URL になるようにする。
+  */
+  const image = {
+    url: `${getBaseUrl()}/og/events/${encodeURIComponent(id)}?v=${event.updatedAt.getTime()}`,
+    width: OG_SIZE.width,
+    height: OG_SIZE.height,
+    alt: event.title,
+  }
+
   return {
     title,
     description,
@@ -85,11 +100,13 @@ export async function getEventMetadata(id: string): Promise<Metadata> {
       description,
       type: 'website',
       locale: 'ja_JP',
+      images: [image],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: event.title,
       description,
+      images: [image.url],
     },
   }
 }

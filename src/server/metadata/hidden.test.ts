@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { prismaMock, resetPrismaMock } from '@/test/contract'
 
@@ -32,6 +32,7 @@ function allText(meta: unknown): string {
 describe('非公開のイベントのメタデータ', () => {
   beforeEach(() => {
     prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -50,6 +51,45 @@ describe('非公開のイベントのメタデータ', () => {
   it('検索避けは index も follow も止める', async () => {
     const meta = await getEventMetadata('e1')
     expect(meta.robots).toEqual({ index: false, follow: false })
+  })
+
+  it('リンクカードの画像も載せない', async () => {
+    const meta = await getEventMetadata('e1')
+    expect(meta.openGraph?.images).toBeUndefined()
+  })
+})
+
+describe('公開のイベントのリンクカードの画像', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXTAUTH_URL', 'https://hosteka.test')
+    prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
+      ...SECRET,
+      startDate: new Date('2026-06-15T10:00:00+09:00'),
+      endDate: null,
+      isPublic: true,
+      isDisabled: false,
+      isHighlighted: true,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  /*
+    クローラーは相対URLを解決しないので絶対URLで書く。版（updatedAt）を付けて、
+    編集したら別の URL になるようにする（画像は CDN に長く持たせる）。
+  */
+  it('版の付いた絶対URLで載せる', async () => {
+    const meta = await getEventMetadata('e1')
+    expect(meta.openGraph?.images).toEqual([
+      expect.objectContaining({
+        url: `https://hosteka.test/og/events/e1?v=${new Date('2026-09-01T00:00:00Z').getTime()}`,
+        width: 1200,
+        height: 630,
+      }),
+    ])
+    expect(meta.twitter).toMatchObject({ card: 'summary_large_image' })
   })
 })
 
@@ -84,6 +124,7 @@ describe('非公開の日程調整のメタデータ', () => {
 describe('公開されているものは中身を出す', () => {
   it('イベントは題名を出す', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -111,6 +152,7 @@ describe('公開されているものは中身を出す', () => {
 describe('掲載中のもの', () => {
   it('イベントは検索避けを付けない', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -141,6 +183,7 @@ describe('掲載中のもの', () => {
 describe('一覧に載せないイベントのメタデータ', () => {
   beforeEach(() => {
     prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -184,6 +227,7 @@ describe('一覧に載せない日程調整のメタデータ', () => {
 describe('無効化されたもの', () => {
   it('イベントは中身を出さない', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,

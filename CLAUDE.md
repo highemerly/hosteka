@@ -162,6 +162,10 @@ PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-c
   `RSC_MARKERS`（`rsc` ヘッダか `_rsc` クエリがあれば `CDN-Cache-Control: no-store`）。
   **`rsc` ヘッダも `_rsc` も proxy には届かない**ので、後者は proxy では書けない
 - `proxy.ts` の Cookie 存在チェックは**認可ではなく UX**（弾かれるページを読み込ませない）
+- **リンクカードの画像（OG 画像）は `app/og/events/[id]`。** URL に版（`?v=<updatedAt>`）を付けて CDN に
+  長く持たせ、版が違えば作らずに今の版へリダイレクトする（描画は重い）。**編集しなければ変わらない値だけを
+  載せる**（参加者の数などを載せると古いまま残る）。非公開・無効化には題名を含まない共通の画像を返す。
+  色は `server/og/render.tsx` に sRGB で直書きしている（satori は CSS 変数も oklch も読めない）
 
 ## テストと CI（重要・必ず守ること）
 
