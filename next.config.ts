@@ -48,6 +48,13 @@ const nextConfig: NextConfig = {
   */
   allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean),
   output: 'standalone',
+  /*
+    OG 画像（`app/og/**`）が実行時に読む日本語のフォント。fs で読むので、
+    standalone の出力に入るよう明示する（入れ忘れると本番でだけ読めずに落ちる）。
+  */
+  outputFileTracingIncludes: {
+    '/og/**': ['./src/assets/fonts/**/*'],
+  },
   serverExternalPackages: ['@prisma/client'],
   compress: true,
   poweredByHeader: false,

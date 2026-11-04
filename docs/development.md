@@ -144,6 +144,7 @@ Playwright を回す（[e2e.yml](../.github/workflows/e2e.yml)。イメージは
 | ファイル | 見ること |
 |---|---|
 | [smoke.spec.ts](../e2e/smoke.spec.ts) | 未ログインの主要なページが開けて JS の例外が出ない、API が空の DB で応答する、キャッシュのヘッダ |
+| [og.spec.ts](../e2e/og.spec.ts) | イベントの OG 画像が版付きの絶対URLで載り、1200×630 の PNG を長く持たせる。版が違えばリダイレクト。非公開には共通の画像 |
 | [visibility.spec.ts](../e2e/visibility.spec.ts) | 非公開のイベント・日程調整は、未ログインには API も画面も head（題名・説明・OGP）も出ない |
 | [fediverse.spec.ts](../e2e/fediverse.spec.ts) | 偽の Mastodon / Misskey 相手に、ログイン・権限の頼み方・前のトークンの失効（Misskey）・投稿・予約投稿・権限不足の返し方。ログイン後の主要なページ |
 
