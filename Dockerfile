@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
 # ============================================
 # Stage 1: 依存関係のインストール
 # ============================================
-FROM node:24-alpine AS deps
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS deps
 WORKDIR /app
 
 # libc6-compat は Alpine で一部のnpmパッケージに必要
@@ -34,7 +34,7 @@ RUN npx prisma generate
 # ============================================
 # Stage 3: ビルド
 # ============================================
-FROM node:24-alpine AS builder
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS builder
 WORKDIR /app
 
 # 依存関係をコピー
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
 # ============================================
 # Stage 4: 本番実行環境
 # ============================================
-FROM node:24-alpine AS runner
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
