@@ -57,8 +57,7 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
   `@types/node` だけ先に上げると、本番の Node に無い API が typecheck を通ってしまう。`engines` はそのとき手で直す
 - まとめて上げるもの: prisma 一式（CLI と client・adapter は同じ版でないと動かない）、react と型定義、next と eslint-config-next
 - `node:24-alpine` は digest で固定する。Alpine や Node のパッチは digest 更新の PR として来る
-- 対象外: `docker-compose.yml` / `docker-compose.override.yml` / `e2e/compose.yml`
-  （DB は本番の共有 Postgres に合わせて手で上げる。app は非公開のレジストリで版を引けない）
+- 対象外: `docker-compose.yml` / `e2e/compose.yml`（DB は本番の共有 Postgres に合わせて手で上げる）
 
 ### PR が来たら
 
