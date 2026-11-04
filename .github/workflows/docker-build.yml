@@ -4,30 +4,36 @@ on:
   push:
     tags:
       - 'v*'
+  # 作り直し用。入力はそのままイメージタグと k8s マニフェストの版になる（`v` は外れない）ので、
+  # タグ push 時と揃えて `v` を付けずに入れる。既定値は置かない（以前は latest で、そのまま実行すると
+  # マニフェストが :latest になり得た）。
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag (e.g., v1.4.2)'
+        description: 'Image tag without "v" (e.g., 2.0.2)'
         required: true
-        default: 'latest'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   K8S_REPO: highemerly/k8sg1-repo
-  K8S_MANIFEST_PATH: manifests/hosteka/prd/web.yaml
+  # 同じイメージを使う prd のマニフェスト（スペース区切り）
+  K8S_MANIFEST_PATHS: "manifests/hosteka/prd/web.yaml"
 
 jobs:
-  # ブランチでは差分で間引いた検査を、リリースでは全部回す。checks は build と並列に走り、
-  # e2e は push したイメージそのもので回す。全部が緑のときだけ create-k8s-pr が動く。
+  # ブランチでは差分で間引いた検査を、リリースでは全部回す。定義はブランチの CI と同じ
+  # 再利用ワークフロー（二重に書かない）。checks は build と並走する。
   checks:
     uses: ./.github/workflows/checks.yml
 
+  # E2E。push したばかりの本番イメージそのもの（＝デプロイするもの）で回す。
+  # 作り直したイメージで通っても、本番に出すものの確認にならない
   e2e:
     needs: build
     uses: ./.github/workflows/e2e.yml
     permissions:
       contents: read
+      # GHCR のパッケージは非公開。push 済みのイメージを pull するのに要る
       packages: read
     with:
       image: ${{ needs.build.outputs.image }}
@@ -39,13 +45,17 @@ jobs:
       packages: write
     outputs:
       version: ${{ steps.version.outputs.version }}
-      has_migration: ${{ steps.migration.outputs.has_migration }}
+      # E2E が pull するイメージ（metadata-action の {{version}} / workflow_dispatch の tag と同じ値）
       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+      # release のノートの起点。前回のタグが無ければ空
+      prev_tag: ${{ steps.prev.outputs.prev_tag }}
+      has_migration: ${{ steps.prev.outputs.has_migration }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          # 前回のタグとの差分を取るため履歴ごと取る
           fetch-depth: 0
 
       - name: Set up Docker Buildx
@@ -72,25 +82,20 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check for migration changes
-        id: migration
+      - name: Find previous tag and migration changes
+        id: prev
         run: |
-          # 前のタグを取得
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            if git diff --name-only "$PREV_TAG" HEAD | grep -q "^prisma/migrations/"; then
-              echo "has_migration=true" >> $GITHUB_OUTPUT
-              echo "Migration files changed since $PREV_TAG"
-            else
-              echo "has_migration=false" >> $GITHUB_OUTPUT
-              echo "No migration changes since $PREV_TAG"
-            fi
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          if [ -n "$PREV_TAG" ] && git diff --name-only "$PREV_TAG" HEAD | grep -q "^prisma/migrations/"; then
+            echo "has_migration=true" >> "$GITHUB_OUTPUT"
+            echo "Migration files changed since $PREV_TAG"
           else
-            echo "has_migration=false" >> $GITHUB_OUTPUT
-            echo "No previous tag found"
+            echo "has_migration=false" >> "$GITHUB_OUTPUT"
+            echo "No migration changes since ${PREV_TAG:-(no previous tag)}"
           fi
 
-      - name: Extract metadata
+      - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -101,24 +106,81 @@ jobs:
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
+      # Dockerfile の RUN --mount=type=cache（npm・.next/cache）は type=registry のキャッシュでは
+      # 永続化されないので、actions/cache 経由で往復させて Next.js のビルドを差分化する
+      - name: Restore build cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3.4.0
+        with:
+          cache-map: |
+            {
+              "var-cache-npm": "/root/.npm",
+              "var-cache-next": "/app/.next/cache"
+            }
+          skip-extraction: false
+
+      # イメージ自体は検査の結果を待たずに push され、latest も動く。本番は版を固定していて
+      # latest をデプロイに使わない（docs/development.md「リリース」）。
+      # ブランチの E2E（e2e.yml）も同じ buildcache を読む。GitHub Actions のキャッシュ（type=gha）は
+      # タグの実行で積んだものをブランチから読めないので、レジストリに置く
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
+          target: runner
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # ブランチの E2E（e2e.yml）も同じ buildcache を読む。GitHub Actions のキャッシュ（type=gha）は
-          # タグの実行で積んだものをブランチから読めないので、レジストリに置く
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,compression=zstd,compression-level=3
+
+  # GitHub Release をタグごと（パッチも含む）に作る。全検査が通ったときだけ＝Release がある版はデプロイしてよい版。
+  # ノートは GitHub の自動生成（前回のタグからマージされた PR の一覧・英語。分類は .github/release.yml）。
+  # 同じノートを create-k8s-pr が k8sg1 の PR 本文に使う（変更の一覧の出どころを1つにする）。
+  release:
+    needs: [build, checks, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      # generate-notes API も Release の作成も contents: write が要る
+      contents: write
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
+
+    steps:
+      # 前回のタグは明示する。省くと GitHub は前回の「Release」を起点にするが、
+      # v2.0.1 以前は Release を作っていない。
+      # workflow_dispatch（作り直し）でタグが無いときは target_commitish の時点で生成される
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PREV_TAG: ${{ needs.build.outputs.prev_tag }}
+        run: |
+          args=(-f tag_name="v$VERSION" -f target_commitish="$GITHUB_SHA")
+          if [ -n "$PREV_TAG" ]; then args+=(-f previous_tag_name="$PREV_TAG"); fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo "notes<<NOTES_EOF"
+            cat "$RUNNER_TEMP/notes.md"
+            echo
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # 作り直し（workflow_dispatch）では Release は作らない（タグが無い・既にある）
+      - name: Create release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
 
   create-k8s-pr:
-    # ビルド・checks・E2E（push したイメージで）が全部成功したときだけ k8s マニフェストへ PR する。
-    # イメージ自体はテスト結果に関わらず GHCR へ push されるが、
-    # デプロイのトリガである GitOps PR はテストが緑でなければ開かない。
-    needs: [build, checks, e2e]
+    # 検査が全部（ビルド・checks・E2E）通ったときだけ k8s マニフェストへ PR する（release が同じ条件で
+    # 待っているので、それを待てば足りる）。k8sg1 は Flux 同期なので、この PR のマージがそのまま
+    # 本番へのデプロイになる。
+    needs: [build, release]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -131,12 +193,50 @@ jobs:
           token: ${{ secrets.K8SG1_PAT }}
           path: k8s-repo
 
+      # マニフェストの書式が変わって sed が何も書き換えないと、差分が無いので create-pull-request は
+      # PR を作らずに黙って成功する（＝デプロイされないのに緑）。書き換わったことを確かめて落とす
       - name: Update image tag
         env:
-          VERSION: ${{ needs.build.outputs.version }}
+          IMAGE: ${{ needs.build.outputs.image }}
+        working-directory: k8s-repo
         run: |
-          cd k8s-repo
-          sed -i "s|image: ghcr.io/highemerly/hosteka:.*|image: ghcr.io/highemerly/hosteka:${VERSION}|" "$K8S_MANIFEST_PATH"
+          repo="${IMAGE%:*}"
+          for p in $K8S_MANIFEST_PATHS; do
+            sed -i "s|image: ${repo}:.*|image: ${IMAGE}|" "$p"
+            grep -q "image: ${IMAGE}$" "$p" || { echo "::error file=$p::image line not updated"; exit 1; }
+          done
+
+      # 本文は英語・全アプリ共通の書式（イメージ・ビルドのリンク・release ジョブが生成したノート）。
+      # ノートの PR は完全な URL で書かれるので、k8sg1 の #N へのリンクに化けない。
+      # マイグレーションの節だけはこのリポジトリ固有（共有 Postgres に port-forward して手元から当てる。
+      # 当てるのはマージ＝イメージ差し替えの前。docs/development.md「リリース」）。
+      - name: Write PR body
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          NOTES: ${{ needs.release.outputs.notes }}
+          HAS_MIGRATION: ${{ needs.build.outputs.has_migration }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "- Image: \`$IMAGE\`"
+            echo "- Build: $RUN_URL"
+            echo
+            printf '%s\n' "$NOTES"
+            if [ "$HAS_MIGRATION" = "true" ]; then
+              echo
+              # heredoc の中身と終端は `{` と同じ字下げに置く（YAML が字下げを外すと終端が行頭に来る）
+              cat <<'MIGRATION'
+          > [!WARNING]
+          > This release includes DB migrations. Back up the database and apply them before merging.
+
+          ```bash
+          kubectl port-forward -n shared-postgres-prd svc/postgres-rw 15432:5432
+          DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npx prisma migrate status
+          DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npm run deploy:migrate
+          ```
+          MIGRATION
+            fi
+          } > "$RUNNER_TEMP/pr-body.md"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
@@ -144,24 +244,12 @@ jobs:
           path: k8s-repo
           token: ${{ secrets.K8SG1_PAT }}
           branch: update-hosteka-${{ needs.build.outputs.version }}
-          commit-message: "Update hosteka to ${{ needs.build.outputs.version }}"
-          title: "Update hosteka to ${{ needs.build.outputs.version }}"
-          body: |
-            ## Changes
-            - Update image: `ghcr.io/highemerly/hosteka:${{ needs.build.outputs.version }}`
-
-            ## Migration
-            ${{ needs.build.outputs.has_migration == 'true' && '⚠️ **このリリースにはDBマイグレーションが含まれます**' || '✅ マイグレーション不要' }}
-
-            ${{ needs.build.outputs.has_migration == 'true' && '### マイグレーション実行手順' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && '```bash' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && 'kubectl port-forward -n shared-postgres-prd svc/postgres-rw 15432:5432' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && 'DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npx prisma migrate status' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && 'DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npm run deploy:migrate' || '' }}
-            ${{ needs.build.outputs.has_migration == 'true' && '```' || '' }}
-
-            ---
-            🤖 Auto-generated by GitHub Actions
+          delete-branch: true
+          commit-message: Update hosteka to ${{ needs.build.outputs.version }}
+          title: Update hosteka to ${{ needs.build.outputs.version }}
+          body-path: ${{ runner.temp }}/pr-body.md
+          # app-update: k8sg1 に大量に来る PR のうちアプリの版上げを見分ける（全アプリ共通）。
+          # アプリ名はタイトルにあるのでアプリ別のラベルは付けない
           labels: |
-            hosteka
+            app-update
             ${{ needs.build.outputs.has_migration == 'true' && 'requires-migration' || '' }}

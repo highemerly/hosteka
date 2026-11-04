@@ -171,21 +171,45 @@ docker compose -f e2e/compose.yml down -v
 
 ## リリース
 
-1. バージョンの bump もブランチ → PR でマージする。マージ後の main にタグを打って push する
-   （タグは ruleset の対象外）:
+1. バージョンの bump もブランチ → PR でマージする（`release/vX.Y.Z`。CI は何も回さない）。
+   マージ後の main にタグを打って push する（タグは ruleset の対象外）:
    ```bash
-   git switch main && git pull
-   git tag vX.Y.Z && git push origin vX.Y.Z
+   git switch main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z
    ```
-2. [docker-build.yml](../.github/workflows/docker-build.yml) がテストとイメージのビルドを並べて走らせ、
-   両方が緑のときだけ k8s のマニフェスト（別リポジトリ）へ PR を出す
-3. その PR をマージすると本番のイメージが替わる
+2. タグの push で [docker-build.yml](../.github/workflows/docker-build.yml) が動く:
+   1. **検査を全部回す**（ブランチで差分により省いたものも）。checks はビルドと並走し、
+      E2E は **push したイメージそのもの**で回す（作り直したイメージで通っても、デプロイするものの確認にならない）
+   2. イメージを `X.Y.Z`・`X.Y`・`latest` で GHCR へ push する。**イメージは検査の結果を待たずに push され、
+      `latest` も動く。本番は版を固定していて、`latest` はデプロイに使わない**
+   3. 全部が緑のときだけ **GitHub Release** を作る（タグごと・パッチも含む）。Release がある版＝デプロイしてよい版
+   4. 同じ条件で、k8s のマニフェスト（k8sg1-repo）へ「Update hosteka to X.Y.Z」の PR を出す（ラベル `app-update`）
+3. **k8sg1 の PR のマージがそのまま本番へのデプロイになる**（Flux が約1分で反映）。k8sg1 には必須チェックが無いので、
+   k8sg1 の CI が緑かを目で見てからマージする
 
-**マイグレーションは自動では走らない。** PR に `requires-migration` が付いていたら、
+### GitHub Release のノート
+
+GitHub の自動生成（前回のタグからマージされた PR の一覧と Full Changelog・英語）。分類は
+[.github/release.yml](../.github/release.yml) で、Renovate の PR（`dependencies` ラベル）を
+`Dependencies` に、それ以外を `Changes` に分ける。同じノートを k8sg1 の PR 本文にも使う。
+
+- **前回のタグを明示している**（`previous_tag_name`）。省くと GitHub は前回の「Release」を起点にするが、
+  v2.0.1 以前は Release を作っていない
+- `.github/release.yml` は、ノートを作る対象のコミット（タグの位置）から読まれる
+
+### マイグレーション
+
+**マイグレーションは自動では走らない。** k8sg1 の PR に `requires-migration` が付いていたら、
 DB のバックアップを取り、port-forward して手元から `npm run deploy:migrate` を当ててから
-PR をマージする（順番は「マイグレーション → イメージ差し替え」）。
+PR をマージする（順番は「マイグレーション → イメージ差し替え」。PR の本文にコマンドが載る）。
 
 **列やテーブルを消すマイグレーションは2回に分ける。** 当ててから差し替えるまでの間、
 古いコードが消えた列を読んで止まる。それを読まない版を先に出してから当てる。
 
-`v*` のタグはすべて GHCR の `latest` を付ける。本番は版を固定しているので影響しない。
+### うまくいかないとき
+
+- **k8sg1 に PR が出ない**: `create-k8s-pr` のログを見る。マニフェストの `image:` の行が書き換わらなかった
+  （マニフェストの書式が変わった）ときは、わざと赤で止めている。検査が赤なら、そもそも `release` と
+  `create-k8s-pr` は動かない
+- **イメージを作り直したい**: Actions から docker-build.yml を手で実行する（`workflow_dispatch`）。
+  入力はそのままイメージタグと k8s マニフェストの版になるので、`v` を付けずに `2.0.2` のように入れる。
+  このときは GitHub Release を作らない（タグが無い・既にある）
