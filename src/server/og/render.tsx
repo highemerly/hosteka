@@ -84,6 +84,7 @@ export function renderEventImage(card: EventCard): Promise<Buffer> {
         fontFamily: 'Noto Sans JP',
         color: COLOR.foreground,
         borderTop: `16px solid ${COLOR.primary}`,
+        position: 'relative',
       }}
     >
       <div style={{ display: 'flex', flex: 1, gap: 48 }}>
@@ -129,23 +130,6 @@ export function renderEventImage(card: EventCard): Promise<Buffer> {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-          {card.cancelled ? (
-            <div
-              style={{
-                display: 'flex',
-                alignSelf: 'flex-start',
-                marginBottom: 16,
-                padding: '4px 20px',
-                borderRadius: 12,
-                border: `3px solid ${COLOR.destructive}`,
-                color: COLOR.destructive,
-                fontSize: 32,
-                fontWeight: 700,
-              }}
-            >
-              中止
-            </div>
-          ) : null}
           <div
             style={{
               display: 'block',
@@ -166,6 +150,44 @@ export function renderEventImage(card: EventCard): Promise<Buffer> {
       </div>
 
       <Footer left={`主催: ${card.organizer}`} />
+
+      {/*
+        **中止は、ふつうのカードの上から大きく重ねる。** 中身（いつ・どこで）は同じに描くので、
+        古いリンクを見た人も「どのイベントが中止になったか」が分かる。小さな札だと、
+        カードを流し見したときに気づかれない。
+      */}
+      {card.cancelled ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.55)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              padding: '6px 52px',
+              border: `10px solid ${COLOR.destructive}`,
+              borderRadius: 28,
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: COLOR.destructive,
+              fontSize: 160,
+              fontWeight: 700,
+              lineHeight: 1.2,
+              transform: 'rotate(-12deg)',
+            }}
+          >
+            中止
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
