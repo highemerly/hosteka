@@ -8,6 +8,8 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { FlashToast } from "@/components/common/FlashToast";
 import { Providers } from "@/app/providers";
+import { publicBaseUrl } from "@/lib/base-url";
+import { defaultOgImages, twitterCard } from "@/lib/og/default";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -30,16 +32,19 @@ const SITE_DESCRIPTION =
   OGP の既定値。**このアプリの流入は Fediverse のリンクプレビューなので、
   ここが空だとリンクを貼った側の見え方が落ちる。**
 
-  **絶対URLを入れない**（`metadataBase` も置かない）。`NEXTAUTH_URL` は
-  ビルド時に無く（Dockerfile が渡していない）、静的ページではビルド時の値が
-  焼き付くので `http://localhost:3000` が配られる。OG画像を足すときは、
-  ビルド引数で URL を渡すところから始めること。
+  **画像は絶対URLで書く必要がある**（クローラーは相対URLを解決しない）。静的なページの
+  HTML は Docker のビルド中に作られるので、公開URLはビルド引数の `NEXTAUTH_URL` で渡す
+  （`publicBaseUrl`）。渡さずにビルドしたら `metadataBase` も画像も置かない（localhost を配らない）。
 
   Next.js の metadata は**キー単位で上書き**される。ページ側が `openGraph` を
-  持つとこの節ごと置き換わるので、`siteName` は各 generateMetadata にも要る
-  （`server/metadata/*.ts`）。
+  持つとこの節ごと置き換わるので、`siteName` と画像（`defaultOgImages`）は
+  各 generateMetadata にも要る（`server/metadata/*.ts`）。
 */
+const BASE_URL = publicBaseUrl()
+const OG_IMAGES = defaultOgImages()
+
 export const metadata: Metadata = {
+  ...(BASE_URL && { metadataBase: new URL(BASE_URL) }),
   title: "Hosteka(SNSコミュニティのためのイベントプラットフォーム)",
   description: SITE_DESCRIPTION,
   openGraph: {
@@ -47,10 +52,12 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     type: "website",
     locale: "ja_JP",
+    images: OG_IMAGES,
   },
   twitter: {
-    card: "summary",
+    card: twitterCard(OG_IMAGES),
     description: SITE_DESCRIPTION,
+    images: OG_IMAGES.map((i) => i.url),
   },
 };
 

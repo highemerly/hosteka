@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 
 import { prisma } from '@/lib/prisma'
 import { formatUserHandle, parseUserHandle } from '@/lib/user-handle'
+import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 /**
  * ユーザーページの OGP メタデータ。
@@ -67,9 +68,10 @@ export async function getUserProfileMetadata(rawHandle: string): Promise<Metadat
       description,
       type: 'profile',
       locale: 'ja_JP',
+      images: defaultOgImages(),
     },
     twitter: {
-      card: 'summary',
+      card: twitterCard(defaultOgImages()),
       title: `${user.displayName}（${at}）`,
       description,
     },

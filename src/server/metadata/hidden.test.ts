@@ -53,9 +53,10 @@ describe('非公開のイベントのメタデータ', () => {
     expect(meta.robots).toEqual({ index: false, follow: false })
   })
 
-  it('リンクカードの画像も載せない', async () => {
+  /* 共通の画像（題名などを含まない）は載せてよいが、イベント固有の画像は載せない */
+  it('イベント固有のリンクカードの画像は載せない', async () => {
     const meta = await getEventMetadata('e1')
-    expect(meta.openGraph?.images).toBeUndefined()
+    expect(JSON.stringify(meta.openGraph?.images ?? [])).not.toContain('/og/events/')
   })
 })
 

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { Metadata } from 'next'
+import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 /**
  * 見せないものに返すメタデータ。
@@ -50,8 +51,10 @@ export function privateMetadata(kind: Kind): Metadata {
       description: shortDescription,
       type: 'website',
       locale: 'ja_JP',
+      // 共通の画像は題名などを含まないので、中身を見せないものにも載せてよい
+      images: defaultOgImages(),
     },
-    twitter: { card: 'summary', title, description: shortDescription },
+    twitter: { card: twitterCard(defaultOgImages()), title, description: shortDescription },
   }
 }
 

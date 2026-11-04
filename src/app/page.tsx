@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import HomeScreen from '@/screens/home/HomeScreen'
+import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 /**
  * トップページ。
@@ -30,9 +31,10 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     type: 'website',
     locale: 'ja_JP',
+    images: defaultOgImages(),
   },
   twitter: {
-    card: 'summary',
+    card: twitterCard(defaultOgImages()),
     title: 'Hosteka — SNSコミュニティのためのイベントプラットフォーム',
     description: DESCRIPTION,
   },

@@ -44,6 +44,12 @@ COPY . .
 # .dockerignore で除外されるため COPY . . では入らない。
 COPY --from=prisma /app/src/generated ./src/generated
 
+# 公開URL。静的なページ（トップ・一覧・FAQ など）の HTML はここで作られるので、
+# リンクカードの画像の絶対URLを焼き込むにはビルドのときに要る（`publicBaseUrl`）。
+# 実行時の値は k8s が同じ名前で渡す。渡さなければ画像を載せない（localhost を配らない）。
+# このステージの RUN にだけ見える（実行時のイメージには残らない）
+ARG NEXTAUTH_URL
+
 # Next.js ビルド（キャッシュマウントで高速化）
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN --mount=type=cache,target=/app/.next/cache \
