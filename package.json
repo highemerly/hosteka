@@ -20,7 +20,7 @@
     "deploy:migrate": "npx prisma migrate deploy",
     "seed": "npx tsx prisma/seed.ts",
     "seed:dummy": "npx tsx prisma/seed-dummy.ts",
-    "purge:old-records": "npx tsx --conditions=react-server scripts/purge-old-records.ts",
+    "cron:maintenance": "npx tsx --conditions=react-server scripts/maintenance.ts",
     "seed:mock-event": "npx tsx prisma/seed-mock-event.ts",
     "seed:mock-pre-event": "npx tsx prisma/seed-mock-pre-event.ts"
   },

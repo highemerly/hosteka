@@ -204,8 +204,8 @@ CI ワークフロー:
 
 プライバシーポリシーは「IPアドレスや User-Agent を含むセッション履歴・
 アクセスログは90日で完全に消去する」と約束している。**守るのは
-`src/server/services/purge-old-records.ts`**。k8s の CronJob が
-`POST /api/v1/admin/purge-old-records` を毎日叩く。手元からは `npm run purge:old-records`。
+`src/server/services/purge-old-records.ts`**。定期的な後片付け（`server/services/maintenance.ts`）の
+一部として、k8s の CronJob が `POST /api/v1/cron/maintenance` を2時間おきに叩く。手元からは `npm run cron:maintenance`。
 
 - `users.ipAddresses` は日時を持たないので、**残ったセッションから作り直す**。
   消すだけでは、同じIPから入り続けている人の行に何年も前のIPが残る
@@ -213,7 +213,9 @@ CI ワークフロー:
   人のログインを持てないが、無認証で開けない
 - **通知（`notifications`）も同じ処理が90日で消す。** こちらはポリシーの
   約束ではない（参加記録と同じサービス機能のデータ）が、放っておくと
-  単調に増える。**新しい cron を増やさない**
+  単調に増える
+- **cron は `cron/maintenance` の1本だけ。** 定期的にやることが増えたら、新しい CronJob を作らず
+  `runMaintenance` に足す（締切を過ぎた「未定」のキャンセルもここで回している）
 
 ## お知らせ（重要・必ず守ること）
 

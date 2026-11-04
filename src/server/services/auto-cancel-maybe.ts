@@ -9,7 +9,8 @@ import { prisma } from '@/lib/prisma'
  * 呼び出し元はすべてここを通す（規則を書き分けない）:
  *   1. GET api/v1/events/[id]  … 詳細を開いたとき（`after()`）
  *   2. api/v1/events/[id]/auto-cancel-maybe  … 個別イベント用
- *   3. api/v1/events/auto-cancel-maybe       … 一括用。cron から定期実行する
+ *   3. api/v1/cron/maintenance              … 2時間おきの定期的な後片付け（一括）
+ *   4. api/v1/events/auto-cancel-maybe       … 一括を管理者が手で回す口
  */
 
 export type AutoCancelResult = {
@@ -61,10 +62,21 @@ export async function autoCancelMaybeForEvent(
   }
 }
 
-/** 期限を持つ全イベントを処理する（cron 用） */
+/**
+ * 締切を過ぎたイベントをまとめて処理する（cron 用。`server/services/maintenance.ts`）。
+ *
+ * **読むのは「締切の日付が今日以前で、未定の人がいる」イベントだけ。** 締切のある
+ * イベントを過去の分まで全部読むと、イベントが増えるほど遅くなる。日付の列は
+ * 締切の瞬間より前を指す（時刻は別の列で、新旧どちらの形式でも日付の 0時以前）ので、
+ * この絞り込みで漏れることはない。締切を本当に過ぎたかは1件ずつ `autoCancelMaybeForEvent` が見る。
+ */
 export async function autoCancelMaybeForAll(now = new Date()) {
   const events = await prisma.event.findMany({
-    where: { registrationDeadlineDate: { not: null }, isDisabled: false },
+    where: {
+      registrationDeadlineDate: { not: null, lte: now },
+      isDisabled: false,
+      participants: { some: { status: 'maybe' } },
+    },
     select: { id: true },
   })
 
