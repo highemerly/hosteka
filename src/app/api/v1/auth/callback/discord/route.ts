@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { updateUserLoginInfo, checkBannedUser } from '@/lib/user-tracking'
+import { updateUserLoginInfo } from '@/lib/user-tracking'
 import { getBaseUrl } from '@/lib/base-url'
 import { getSafeRedirectUrl } from '@/lib/redirect-url'
 import { recordTermsAcceptance } from '@/server/auth/terms'
 import { issueSessionRedirect } from '@/server/auth/oauth-callback'
 import { loginIdentity } from '@/server/auth/login-identity'
-import { isPlatformUserId, resolveHostedUser } from '@/server/auth/hosted-user'
+import { isBannedHostedLogin, isPlatformUserId, resolveHostedUser } from '@/server/auth/hosted-user'
 import { COOKIE_OAUTH_SESSION, COOKIE_SECURE } from '@/lib/cookie-names'
 import { decrypt, type HostedOAuthSessionData } from '@/lib/crypto'
 import { sanitizeDisplayName } from '@/lib/profile-text'
@@ -137,16 +137,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.redirect(`${baseUrl}/auth/error?error=invalid_account`)
     }
 
-    // BANチェック
-    const isBanned = await checkBannedUser(normalizedUsername, 'discord.com')
-    if (isBanned) {
-      return NextResponse.redirect(`${baseUrl}/auth/error?error=user_banned`)
-    }
-
     // アバターURLを構築
     const avatarUrl = userData.avatar
       ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
       : null
+
+    /*
+      **停止の判定は、行を書き換える前に。** 名前ではなくIDで見る
+      （`isBannedHostedLogin`。名前を変えて入り直した人も、名前を取った別人も正しく分ける）。
+    */
+    const isBanned = await isBannedHostedLogin({
+      server: 'discord.com',
+      platformUserId: userData.id,
+      username: normalizedUsername,
+    })
+    if (isBanned) {
+      return NextResponse.redirect(`${baseUrl}/auth/error?error=user_banned`)
+    }
 
     const user = await resolveHostedUser({
       platform: 'discord',
@@ -156,14 +163,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       displayName: sanitizeDisplayName(userData.global_name, normalizedUsername),
       avatar: avatarUrl,
     })
-
-    /*
-      **名前を変えて入り直した人の停止も止める。** 上の BAN チェックは
-      名前で引くので、停止されたあとでハンドルを変えると素通りする。
-    */
-    if (user.ban) {
-      return NextResponse.redirect(`${baseUrl}/auth/error?error=user_banned`)
-    }
 
     /*
       同意はログイン画面で取っている（`register` が `termsAccepted` を

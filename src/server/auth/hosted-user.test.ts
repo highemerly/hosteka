@@ -39,22 +39,44 @@ const tx = {
       const row = rows.find((r) => r.id === where.id)!
       Object.assign(row, data)
       assertUnique()
-      return { ...row, isAdmin: false, lastTermsAcceptedAt: null, ban: null }
+      return { ...row, isAdmin: false, lastTermsAcceptedAt: null }
     },
     create: async ({ data }: { data: Omit<Row, 'id' | 'bio'> }) => {
       const row = { id: `new${++seq}`, bio: null, ...data }
       rows.push(row)
       assertUnique()
-      return { ...row, isAdmin: false, lastTermsAcceptedAt: null, ban: null }
+      return { ...row, isAdmin: false, lastTermsAcceptedAt: null }
     },
   },
 }
 
+/** 停止の行（banned_users）。`userId` は停止した行。削除方式だった頃の記録は null */
+const bans: { username: string; server: string; userId: string | null }[] = []
+
 vi.mock('@/lib/prisma', () => ({
-  prisma: { $transaction: (fn: (t: typeof tx) => unknown) => fn(tx) },
+  prisma: {
+    $transaction: (fn: (t: typeof tx) => unknown) => fn(tx),
+    user: {
+      findUnique: async ({ where }: { where: { server_platformUserId: { server: string; platformUserId: string } } }) => {
+        const { server, platformUserId } = where.server_platformUserId
+        const row = rows.find((r) => r.server === server && r.platformUserId === platformUserId)
+        if (!row) return null
+        return { ban: bans.some((b) => b.userId === row.id) ? { id: 'ban' } : null }
+      },
+    },
+    bannedUser: {
+      findUnique: async ({ where }: { where: { username_server: { username: string; server: string } } }) => {
+        const { username, server } = where.username_server
+        const ban = bans.find((b) => b.username === username && b.server === server)
+        if (!ban) return null
+        const row = rows.find((r) => r.id === ban.userId)
+        return { user: row ? { platformUserId: row.platformUserId } : null }
+      },
+    },
+  },
 }))
 
-import { isPlatformUserId, releasedUsername, resolveHostedUser } from './hosted-user'
+import { isBannedHostedLogin, isPlatformUserId, releasedUsername, resolveHostedUser } from './hosted-user'
 
 function seed(row: Partial<Row> & Pick<Row, 'id' | 'username'>): void {
   rows.push({
@@ -81,6 +103,7 @@ function login(platformUserId: string, username: string) {
 
 beforeEach(() => {
   rows.length = 0
+  bans.length = 0
   seq = 0
 })
 
@@ -174,6 +197,54 @@ describe('resolveHostedUser', () => {
     const user = await login('111', 'foo')
 
     expect(user.id).not.toBe('d')
+  })
+})
+
+describe('isBannedHostedLogin', () => {
+  const banned = (platformUserId: string, username: string) =>
+    isBannedHostedLogin({ server: 'x.com', platformUserId, username })
+
+  it('停止された本人は、名前を変えて入り直しても断る', async () => {
+    seed({ id: 'alice', username: 'foo', platformUserId: '111' })
+    bans.push({ username: 'foo', server: 'x.com', userId: 'alice' })
+
+    expect(await banned('111', 'bar')).toBe(true)
+  })
+
+  /** 名前で判定すると、手放された名前を取っただけの別人まで締め出す */
+  it('停止された人が手放した名前を取った別人は、断らない', async () => {
+    seed({ id: 'alice', username: 'foo', platformUserId: '111' })
+    bans.push({ username: 'foo', server: 'x.com', userId: 'alice' })
+
+    expect(await banned('222', 'foo')).toBe(false)
+  })
+
+  it('別人として入ったことのある人も、停止された人の名前を取っていれば別人として通す', async () => {
+    seed({ id: 'alice', username: 'foo-alice', platformUserId: '111' })
+    seed({ id: 'bob', username: 'bob', platformUserId: '222' })
+    bans.push({ username: 'foo', server: 'x.com', userId: 'alice' })
+
+    expect(await banned('222', 'foo')).toBe(false)
+  })
+
+  it('停止された行が消えている（削除方式の頃の記録）なら、名前で断る', async () => {
+    bans.push({ username: 'foo', server: 'x.com', userId: null })
+
+    expect(await banned('333', 'foo')).toBe(true)
+  })
+
+  it('停止された行がIDを持たなければ、本人かもしれないので名前で断る', async () => {
+    seed({ id: 'old', username: 'foo', platformUserId: null })
+    bans.push({ username: 'foo', server: 'x.com', userId: 'old' })
+
+    expect(await banned('333', 'foo')).toBe(true)
+  })
+
+  it('停止されていない人は通す', async () => {
+    seed({ id: 'alice', username: 'foo', platformUserId: '111' })
+
+    expect(await banned('111', 'foo')).toBe(false)
+    expect(await banned('444', 'new')).toBe(false)
   })
 })
 
