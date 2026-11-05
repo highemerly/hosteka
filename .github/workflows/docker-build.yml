@@ -19,9 +19,6 @@ env:
   # 公開URL。静的なページにリンクカードの画像の絶対URLを焼き込むため、ビルドのときに渡す
   # （e2e.yml のブランチのビルドも同じ値を渡す）
   PUBLIC_URL: https://hosteka.piyo.me
-  K8S_REPO: highemerly/k8sg1-repo
-  # 同じイメージを使う prd のマニフェスト（スペース区切り）
-  K8S_MANIFEST_PATHS: "manifests/hosteka/prd/web.yaml"
 
 jobs:
   # ブランチでは差分で間引いた検査を、リリースでは全部回す。定義はブランチの CI と同じ
@@ -140,7 +137,7 @@ jobs:
 
   # GitHub Release をタグごと（パッチも含む）に作る。全検査が通ったときだけ＝Release がある版はデプロイしてよい版。
   # ノートは GitHub の自動生成（前回のタグからマージされた PR の一覧・英語。分類は .github/release.yml）。
-  # 同じノートを create-k8s-pr が k8sg1 の PR 本文に使う（変更の一覧の出どころを1つにする）。
+  # 同じノートを create-k8s-pr がマニフェストのリポジトリへの PR 本文に使う（変更の一覧の出どころを1つにする）。
   release:
     needs: [build, checks, e2e]
     runs-on: ubuntu-latest
@@ -182,12 +179,17 @@ jobs:
 
   create-k8s-pr:
     # 検査が全部（ビルド・checks・E2E）通ったときだけ k8s マニフェストへ PR する（release が同じ条件で
-    # 待っているので、それを待てば足りる）。k8sg1 は Flux 同期なので、この PR のマージがそのまま
-    # 本番へのデプロイになる。
+    # 待っているので、それを待てば足りる）。マニフェストのリポジトリは Flux で同期しているので、
+    # この PR のマージがそのまま本番へのデプロイになる。
     needs: [build, release]
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      # マニフェストのリポジトリは非公開。このリポジトリの Actions のログは誰でも読めるので、リポジトリ名と
+      # マニフェストのパス（同じイメージを使う prd のもの、スペース区切り）もシークレットに置き、ログでは伏せる
+      K8S_REPO: ${{ secrets.K8SG1_REPO }}
+      K8S_MANIFEST_PATHS: ${{ secrets.K8SG1_MANIFEST_PATHS }}
 
     steps:
       - name: Checkout k8s repo
@@ -211,9 +213,9 @@ jobs:
           done
 
       # 本文は英語・全アプリ共通の書式（イメージ・ビルドのリンク・release ジョブが生成したノート）。
-      # ノートの PR は完全な URL で書かれるので、k8sg1 の #N へのリンクに化けない。
-      # マイグレーションの節だけはこのリポジトリ固有（共有 Postgres に port-forward して手元から当てる。
-      # 当てるのはマージ＝イメージ差し替えの前。docs/development.md「リリース」）。
+      # ノートの PR は完全な URL で書かれるので、マニフェストのリポジトリの #N へのリンクに化けない。
+      # マイグレーションの節だけはこのリポジトリ固有。当てるのはマージ＝イメージ差し替えの前
+      # （docs/development.md「リリース」）。接続の手順はマニフェストのリポジトリの手順書にあり、ここには書かない。
       - name: Write PR body
         env:
           IMAGE: ${{ needs.build.outputs.image }}
@@ -231,13 +233,8 @@ jobs:
               # heredoc の中身と終端は `{` と同じ字下げに置く（YAML が字下げを外すと終端が行頭に来る）
               cat <<'MIGRATION'
           > [!WARNING]
-          > This release includes DB migrations. Back up the database and apply them before merging.
-
-          ```bash
-          kubectl port-forward -n shared-postgres-prd svc/postgres-rw 15432:5432
-          DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npx prisma migrate status
-          DATABASE_URL="postgresql://<username>:<password>@localhost:15432/hosteka?schema=public" npm run deploy:migrate
-          ```
+          > This release includes DB migrations. Back up the database and apply them (`npm run deploy:migrate`) before merging.
+          > The steps to reach the production database are in this repository's service doc for hosteka.
           MIGRATION
             fi
           } > "$RUNNER_TEMP/pr-body.md"
@@ -252,7 +249,7 @@ jobs:
           commit-message: Update hosteka to ${{ needs.build.outputs.version }}
           title: Update hosteka to ${{ needs.build.outputs.version }}
           body-path: ${{ runner.temp }}/pr-body.md
-          # app-update: k8sg1 に大量に来る PR のうちアプリの版上げを見分ける（全アプリ共通）。
+          # app-update: マニフェストのリポジトリに大量に来る PR のうちアプリの版上げを見分ける（全アプリ共通）。
           # アプリ名はタイトルにあるのでアプリ別のラベルは付けない
           labels: |
             app-update
