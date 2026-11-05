@@ -96,6 +96,16 @@ function isPrivateIPv6(ip: string): boolean {
   if (host.startsWith('2001:db8')) return true // 文書用
   if (host.startsWith('::ffff:')) return true // 判定できない射影は通さない
 
+  // 先頭の16ビットで決まる範囲。文字列の前方一致だと `fec:`（0x0fec）なども当たるので数で見る
+  const first = parseInt(host.split(':')[0] || '0', 16)
+  if ((first & 0xffc0) === 0xfec0) return true // fec0::/10 サイトローカル（廃止済み。内部で使われうる）
+  /*
+    2002::/16 は 6to4。**中に IPv4 アドレスを埋め込む**（`2002:0a00:0001::` は 10.0.0.1）。
+    中身を読んで判定する手もあるが、6to4 は廃止済みで、ここに載る Fediverse の
+    サーバーは無いので、範囲ごと断る。
+  */
+  if (first === 0x2002) return true
+
   return false
 }
 
