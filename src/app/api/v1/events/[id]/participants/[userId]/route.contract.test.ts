@@ -110,11 +110,29 @@ describe('PATCH /api/v1/events/[id]/participants/[userId]', () => {
   })
 
   /*
-    **キャンセルにしたら幹事も外す。** 幹事の権限は参加状態を見ないので、
-    残すと参加していない人が参加者を編集できる。
+    **幹事と作成者はキャンセルにできない**（`allowedAdminActions`）。キャンセルにすると幹事も
+    外れるので、作成者でない幹事がほかの幹事を外せてしまう。作成者は先に幹事を解除する。
   */
-  it('キャンセルにすると幹事も外れる', async () => {
+  it('幹事はキャンセルにできない（作成者が見ていても400）', async () => {
     prismaMock.eventParticipant.findUnique.mockResolvedValue(participant('attending', true))
+
+    const response = await PATCH(patch('cancel'), { params })
+    expect(response.status).toBe(400)
+    expect(prismaMock.eventParticipant.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('作成者でない幹事は、作成者をキャンセルにできない（400）', async () => {
+    // 対象（user_2）が作成者で、見ている人は幹事
+    prismaMock.event.findUnique.mockResolvedValue({ ...EVENT, creatorId: 'user_2' })
+    prismaMock.eventParticipant.findUnique.mockResolvedValue(participant('attending'))
+
+    const response = await PATCH(patch('cancel'), { params })
+    expect(response.status).toBe(400)
+    expect(prismaMock.eventParticipant.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('幹事でない参加者はキャンセルにできる', async () => {
+    prismaMock.eventParticipant.findUnique.mockResolvedValue(participant('attending'))
 
     const response = await PATCH(patch('cancel'), { params })
     expect(response.status).toBe(200)
