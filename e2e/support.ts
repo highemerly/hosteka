@@ -101,7 +101,7 @@ export async function loginMisskey(page: Page, username: string, { write = true 
 
 /** イベントを作る。画面のフォームが送るのと同じ形（`eventFormSchema`） */
 export async function createEvent(page: Page, fields: { title: string; description?: string; isPublic?: boolean }) {
-  const res = await call<{ data: { id: string; creator: { id: string } } }>(page, 'POST', '/api/v1/events', {
+  const res = await call<{ data: { id: string } }>(page, 'POST', '/api/v1/events', {
     title: fields.title,
     description: fields.description ?? '',
     hashtags: [],

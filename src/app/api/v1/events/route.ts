@@ -513,6 +513,7 @@ export const POST = defineRoute({
     const event = await prisma.$transaction(async (tx) => {
       // イベントを作成。共通の写し取りは PUT と同じ関数を通す
       const createdEvent = await tx.event.create({
+        select: { id: true },
         data: {
           ...eventColumnsFromForm(body),
           isAllowedForFediverse,
@@ -559,55 +560,11 @@ export const POST = defineRoute({
       return createdEvent
     })
 
-    // 作成されたイベントを詳細情報と一緒に取得
-    const eventWithDetails = await prisma.event.findUnique({
-      where: { id: event.id },
-      omit: { isDisabled: true },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatar: true,
-            server: true,
-            platform: true,
-          },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatar: true,
-                server: true,
-                platform: true,
-              },
-            },
-          },
-        },
-        options: {
-          orderBy: {
-            displayOrder: 'asc',
-          },
-        },
-        optionGroups: {
-          include: {
-            options: {
-              orderBy: {
-                displayOrder: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            displayOrder: 'asc',
-          },
-        },
-      },
-    })
-
-    return created(eventWithDetails)
+    /*
+      作ったものは `{ id }` だけを返す。画面は詳細ページへ移るだけで、中身は
+      `GET /events/[id]` が DTO にして返す。行をそのまま返すと、列を足したときに
+      黙って外へ出る。
+    */
+    return created({ id: event.id })
   },
 })
