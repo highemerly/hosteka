@@ -3,8 +3,12 @@ export const dynamic = 'force-dynamic'
 import { getSession } from '@/server/auth/session'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { rejectCrossOrigin } from '@/server/http/same-origin'
 
-export async function POST(_req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const rejected = rejectCrossOrigin(request)
+  if (rejected) return rejected
+
   try {
     const session = await getSession()
     
