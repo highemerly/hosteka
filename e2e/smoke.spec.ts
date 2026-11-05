@@ -63,3 +63,16 @@ test('RSC の要求は CDN に持たせない（Accept 無しで RSC: 1 だけ�
   const res = await request.get('/faq?_rsc=e2e', { headers: { RSC: '1' }, maxRedirects: 0 })
   expect(res.headers()['cdn-cache-control']).toBe('no-store')
 })
+
+/*
+  CSP（next.config.ts）。違反が無いことは openCleanly が各ページで見ている。
+  ここでは、付いていること（付いていなければ違反も起きない）と、インラインの
+  スクリプトを止める形になっていないことを見る。
+*/
+test('ページに CSP が付き、インラインのスクリプトを止めない', async ({ request }) => {
+  const csp = (await request.get('/')).headers()['content-security-policy'] ?? ''
+  expect(csp).toContain("script-src 'self' 'unsafe-inline'")
+  expect(csp).toContain("frame-ancestors 'none'")
+  // ハッシュや nonce があると、ブラウザは 'unsafe-inline' を無視する
+  expect(csp).not.toMatch(/'(sha256|sha384|sha512|nonce)-/)
+})

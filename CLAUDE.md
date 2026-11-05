@@ -280,6 +280,12 @@ CI ワークフロー:
 
 ## セキュリティ（重要・必ず守ること）
 
+- **CSP は `next.config.ts` の `CONTENT_SECURITY_POLICY`。`script-src` は `'unsafe-inline'` のまま。**
+  nonce は全ページを動的にして CDN に載らなくなり、ハッシュは RSC のインラインスクリプトに使えない。
+  **ハッシュや nonce を足さない**（あるとブラウザが `'unsafe-inline'` を無視し、全ページのスクリプトが止まる）。
+  外部のスクリプト・接続先・画像以外の読み込み先を足すときは、ここを直す。違反は E2E が拾う
+- **画面で `eval` / `new Function` を使わない**（CSP が止める）。zod は `src/instrumentation-client.ts` で
+  `jitless` にしてある
 - **ユーザー情報を Client Component へ渡すときは必ず `USER_PUBLIC_SELECT`（`src/lib/select-presets.ts`）を使う。**
   Prisma の `include: { creator: true }` / `select: { user: true }` は User の全スカラーカラムを取得するため、
   `accessToken`（暗号化済みOAuthトークン）・`ipAddresses`・`isAdmin`・`lastLoginAt` が RSC ペイロード経由で
