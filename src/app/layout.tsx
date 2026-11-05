@@ -85,8 +85,8 @@ export default async function RootLayout({
         {/*
           スタイル適用前に同期実行してFOUCを防ぐ。全閲覧者で内容が同一なので
           HTML の CDN キャッシュ可能性は損なわれない。
-          将来 CSP を導入する場合は必ず hash ベース（'sha256-…'）で許可すること。
-          リクエスト毎の nonce を使うと HTML がキャッシュ不能になる。
+          CSP（`next.config.ts`）は `'unsafe-inline'` で許可している。ハッシュや nonce を
+          足すと `'unsafe-inline'` が無視されてこれが止まる（理由は next.config.ts）。
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/*

@@ -32,6 +32,39 @@ const RSC_MARKERS = [
 ] as const
 const CDN_NO_STORE = [{ key: 'CDN-Cache-Control', value: 'no-store' }]
 
+/**
+ * Content Security Policy。全パスに付ける。
+ *
+ * **`script-src` に `'unsafe-inline'` を残す。** App Router はどのページにも
+ * インラインスクリプト（RSC のデータ `self.__next_f.push(...)`）を埋め込み、中身は
+ * ページごと・ビルドごとに変わるので、固定のハッシュでは許可できない。nonce は
+ * 全ページを動的にし、HTML を CDN に持たせられなくなる（Next の CSP のガイド）。
+ * **ハッシュを足さないこと** — ハッシュか nonce があると、ブラウザは
+ * `'unsafe-inline'` を無視し、テーマの初期化や RSC のスクリプトが止まる。
+ *
+ * それでも次は止まる: 外部からのスクリプトの読み込み、外への送信（`connect-src`）、
+ * `<base>` の差し替え、プラグイン、枠への埋め込み、外へのフォーム送信。
+ *
+ * - `img-src https:` … アバターは各 Fediverse サーバー・Discord・X から来る
+ * - RUM（`/_n-rum/`）は同じホスト名で配っているので `'self'` で足りる
+ * - 開発時だけ `'unsafe-eval'`（React がエラーの位置を復元するのに使う）
+ *
+ * 違反は E2E（`e2e/support.ts` の `openCleanly`）が拾う。
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' https: data: blob:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  'upgrade-insecure-requests',
+].join('; ')
+
 const nextConfig: NextConfig = {
   /*
     **CLAUDE.md を Next に書き換えさせない。**
@@ -60,6 +93,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: CONTENT_SECURITY_POLICY }],
+      },
       // 認証が必要なページ
       {
         source: '/dashboard/:path*',
