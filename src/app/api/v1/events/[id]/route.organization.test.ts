@@ -42,6 +42,13 @@ function event(creatorId: string, organizationId: string | null) {
     isAllowedForDiscord: false,
     isAllowedForTwitter: false,
     allowParticipationRequest: true,
+    // 応答（取得と同じ詳細）を組み立てるのに使う
+    title: 'テストイベント',
+    creator: { id: creatorId, username: 'host', displayName: null, avatar: null, server: 'example.social', platform: 'mastodon' },
+    organization: null,
+    optionGroups: [],
+    createdAt: new Date('2026-09-01T00:00:00+09:00'),
+    updatedAt: new Date('2026-09-01T00:00:00+09:00'),
     participants: [
       {
         userId: ME,

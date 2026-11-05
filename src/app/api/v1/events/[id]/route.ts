@@ -16,11 +16,7 @@ import { jstDay } from '@/lib/event-datetime'
 import { isAllowedEventTermsChange } from '@/lib/event-terms'
 import { canChangeOrganization } from '@/lib/status-transition'
 import { enrichServersWithPlatform } from '@/lib/instance-platform'
-import {
-  explainIneligibility,
-  extractServerNamesFromAllowedServers,
-  isUserAllowed,
-} from '@/lib/participation-utils'
+import { extractServerNamesFromAllowedServers } from '@/lib/participation-utils'
 import { eventColumnsFromForm } from '@/server/events/event-write'
 import { notifiableEventChanges } from '@/server/events/event-change'
 import {
@@ -29,6 +25,7 @@ import {
   notifyParticipationRequestsClosed,
 } from '@/server/notifications/notify'
 import { autoCancelMaybeForEvent } from '@/server/services/auto-cancel-maybe'
+import { EVENT_DETAIL_INCLUDE, eventViewer } from '@/server/queries/event-detail'
 import type { EventOptionGroup, EventOption } from '@/generated/prisma/client'
 
 // オプショングループ（オプション付き）の型
@@ -43,50 +40,7 @@ export const GET = defineRoute({
     const id = params.id
     const event = await prisma.event.findUnique({
       where: { id },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatar: true,
-            server: true,
-            platform: true,
-          },
-        },
-        organization: {
-          select: { id: true, slug: true, name: true, admins: { select: { userId: true } } }
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatar: true,
-                server: true,
-                platform: true,
-              },
-            },
-            groupSelections: {
-              include: { options: { include: { option: true } } },
-            },
-          },
-        },
-        optionGroups: {
-          include: {
-            options: {
-              orderBy: {
-                displayOrder: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            displayOrder: 'asc',
-          },
-        },
-      },
+      include: EVENT_DETAIL_INCLUDE,
     })
 
     if (!event) throw ApiError.notFound('イベントが見つかりません')
@@ -111,16 +65,6 @@ export const GET = defineRoute({
       }
     })
 
-    const userPlatform = session?.user.platform
-    const userServer = session?.user.server
-    const platformSettings = {
-      isAllowedForFediverse: event.isAllowedForFediverse,
-      isAllowedForDiscord: event.isAllowedForDiscord,
-      isAllowedForTwitter: event.isAllowedForTwitter,
-      allowedFediverseServers: event.allowedFediverseServers,
-    }
-    const isEligible = isUserAllowed(userPlatform, userServer, platformSettings)
-
     const isOrganizer = session
       ? await checkOrganizerPermission(id, session.user.id)
       : false
@@ -144,14 +88,7 @@ export const GET = defineRoute({
       「参加できるか」の判定は認可と同じ規則に依存するので、
       画面側で再実装すると必ずずれる。
     */
-    return serializeEventDetail(event, {
-      isAuthenticated: Boolean(session),
-      isOrganizer,
-      canCancel,
-      userId: session?.user.id ?? null,
-      isEligible,
-      ineligibleReason: explainIneligibility(userPlatform, userServer, platformSettings),
-    })
+    return serializeEventDetail(event, eventViewer(event, session, isOrganizer, Boolean(canCancel)))
   },
 })
 
@@ -548,52 +485,15 @@ export const PUT = defineRoute({
 
     })
 
-    // 更新されたイベントを詳細情報と一緒に取得
-    const eventWithDetails = await prisma.event.findUnique({
+    /*
+      更新後の姿を**取得と同じ形で**返す（`server/queries/event-detail.ts`）。
+      閲覧者は幹事で確定している（`auth: 'required'` ＋ ガード）。
+    */
+    const updated = await prisma.event.findUnique({
       where: { id },
-      omit: { isDisabled: true },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatar: true,
-            server: true,
-            platform: true,
-          },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                avatar: true,
-                server: true,
-                platform: true,
-              },
-            },
-            groupSelections: {
-              include: { options: { include: { option: true } } },
-            },
-          },
-        },
-        optionGroups: {
-          include: {
-            options: {
-              orderBy: {
-                displayOrder: 'asc',
-              },
-            },
-          },
-          orderBy: {
-            displayOrder: 'asc',
-          },
-        },
-      },
+      include: EVENT_DETAIL_INCLUDE,
     })
+    if (!updated) throw ApiError.notFound('イベントが見つかりません')
 
     notifyAfter('event.update', async () => {
       const target = { id, title: body.title }
@@ -607,7 +507,8 @@ export const PUT = defineRoute({
       }
     })
 
-    return eventWithDetails
+    const canCancel = await checkEventOwnerPermission(id, session.user.id)
+    return serializeEventDetail(updated, eventViewer(updated, session, true, canCancel))
   },
 })
 

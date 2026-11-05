@@ -47,6 +47,13 @@ function event(participants: { status: string }[], terms: string | null = TERMS)
     isAllowedForDiscord: false,
     isAllowedForTwitter: false,
     allowParticipationRequest: true,
+    // 応答（取得と同じ詳細）を組み立てるのに使う
+    title: 'テストイベント',
+    creator: { id: PERSONAS.user.user.id, username: 'host', displayName: null, avatar: null, server: 'example.social', platform: 'mastodon' },
+    organization: null,
+    optionGroups: [],
+    createdAt: new Date('2026-09-01T00:00:00+09:00'),
+    updatedAt: new Date('2026-09-01T00:00:00+09:00'),
     participants: participants.map((p) => ({ ...p, user: { platform: 'mastodon', server: 'example.social' } })),
   }
 }

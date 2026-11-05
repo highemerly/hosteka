@@ -14,10 +14,6 @@ import { serializePreEventListItem } from '@/server/serializers/pre-event'
  * ここは自分のものを並べる場所なので、非公開のものもハイライト対象で
  * ないものも自分には見えなければならない。見える範囲を決めているのは
  * 「自分が主催しているか、回答したか」の条件そのもの。
- *
- * **`/api/v1/pre-events` は置き換えない。** あちらは管理画面が使っている
- * 汎用の絞り込みで、Prisma のモデルに近い形を返す。
- * こちらは一覧カード（`PreEventListItemDto`）に必要なものだけを取る。
  */
 export const GET = defineRoute({
   auth: 'required',

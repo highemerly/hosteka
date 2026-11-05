@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { call, createEvent, createPreEvent, fakeverse, loginMastodon, loginMisskey, openCleanly } from './support'
 
@@ -116,13 +116,20 @@ test.describe('連絡（SNS への投稿）', () => {
     participantIds: [me],
   })
 
+  /** 作ったイベントの作成者（＝ログインしている本人）。作成の応答は `{ id }` だけなので詳細から取る */
+  const creatorOf = async (page: Page, eventId: string) => {
+    const res = await call<{ data: { creator: { id: string } } }>(page, 'GET', `/api/v1/events/${eventId}`)
+    expect(res.status, JSON.stringify(res.body)).toBe(200)
+    return res.body.data.creator.id
+  }
+
   test('Mastodon: 本文と公開範囲がそのまま届く', async ({ page }) => {
     const user = `poster${stamp()}`
     await loginMastodon(page, user)
     const event = await createEvent(page, { title: `連絡のテスト ${stamp()}` })
     const message = `@${user}@mastodon.test 集合は10時です\nhttp://localhost:3000/events/${event.id}`
 
-    const res = await call(page, 'POST', '/api/v1/events/post-immediate', post(event.id, event.creator.id, message, 'unlisted'))
+    const res = await call(page, 'POST', '/api/v1/events/post-immediate', post(event.id, await creatorOf(page, event.id), message, 'unlisted'))
     expect(res.status, JSON.stringify(res.body)).toBe(200)
 
     const [status] = await fakeverse.received({ host: 'mastodon.test', path: '/api/v1/statuses' })
@@ -136,7 +143,7 @@ test.describe('連絡（SNS への投稿）', () => {
     const event = await createEvent(page, { title: `連絡のテスト ${stamp()}` })
     const message = `@${user}@misskey.test 集合は10時です`
 
-    const res = await call(page, 'POST', '/api/v1/events/post-immediate', post(event.id, event.creator.id, message, 'home'))
+    const res = await call(page, 'POST', '/api/v1/events/post-immediate', post(event.id, await creatorOf(page, event.id), message, 'home'))
     expect(res.status, JSON.stringify(res.body)).toBe(200)
 
     const [note] = await fakeverse.received({ host: 'misskey.test', path: '/api/notes/create' })
@@ -151,7 +158,7 @@ test.describe('連絡（SNS への投稿）', () => {
     const scheduledFor = '2030-01-14T10:00:00+09:00'
 
     const res = await call<{ data: { scheduledStatusId: string } }>(page, 'POST', '/api/v1/events/post-scheduled', {
-      ...post(event.id, event.creator.id, '明日は10時集合です', 'public'),
+      ...post(event.id, await creatorOf(page, event.id), '明日は10時集合です', 'public'),
       scheduledFor,
     })
     expect(res.status, JSON.stringify(res.body)).toBe(200)
@@ -182,7 +189,7 @@ test.describe('連絡（SNS への投稿）', () => {
       page,
       'POST',
       '/api/v1/events/post-immediate',
-      post(event.id, event.creator.id, 'こんにちは', 'public')
+      post(event.id, await creatorOf(page, event.id), 'こんにちは', 'public')
     )
     expect(res.status).toBe(403)
     expect(res.body.error.details?.map((d) => d.path)).toContain('writePermission')

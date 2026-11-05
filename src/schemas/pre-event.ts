@@ -2,37 +2,9 @@ import { z } from 'zod'
 import { VALIDATION_LIMITS } from './limits'
 import { allowedFediverseServersSchema } from './allowed-servers'
 
-import { booleanQuery } from './common'
-
-/**
- * 日程調整一覧のクエリ。
- *
- * 従来は searchParams.get() の生文字列を各所で 'true' と比較していた。
- * ここで真偽値へ正規化し、組み合わせの制約も schema 側で表現する。
- */
-export const listPreEventsQuery = z
-  .object({
-    isCreated: booleanQuery.optional(),
-    isParticipated: booleanQuery.optional(),
-    isParticipable: booleanQuery.optional(),
-    ownershipMode: z.enum(['or', 'and']).default('or'),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    registrationDeadlineFrom: z.string().optional(),
-    registrationDeadlineTo: z.string().optional(),
-    sort: z.string().default('createdAtDESC'),
-    creatorServer: z.string().trim().optional(),
-  })
-  .refine((v) => !(v.isParticipable === true && v.isParticipated !== false), {
-    message: 'isParticipable=true のときは isParticipated=false を指定してください',
-    path: ['isParticipable'],
-  })
-
 /**
  * 自分の日程調整一覧（`/dashboard/my-pre-events`）のクエリ。
  *
- * **`listPreEventsQuery` とは別に定義する。** あちらは旧ダッシュボードと
- * 管理画面が使っている汎用の絞り込みで、組み合わせの制約が多い。
  * イベント側の `myEventsQuery` と**同じ形にしてある** — 2つの画面で
  * 絞り込みの語彙が違うと、行き来するたびに読み替えが要る。
  */
