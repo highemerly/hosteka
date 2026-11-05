@@ -8,8 +8,17 @@ Mastodon・Misskey・Pleroma はサーバーごとにその場でアプリを登
 
 ## ブランチ（必ず守ること）
 
+- PR は自分に assign する（`gh pr create --assignee @me`。いくつものリポジトリの PR を「Assigned to you」にまとめる）
 - **main へ直接コミットしない。** 作業を始めるときにブランチを切り、PR で取り込む
   （ruleset が main への push を拒否する。手順と理由は `docs/development.md`）
+
+## 公開リポジトリ（必ず守ること）
+
+- **インフラの非公開の情報**（マニフェストのリポジトリ名・パス、namespace、クラスタの内部の名前や IP）を
+  コード・docs・コメント・コミットメッセージ・PR に書かない。ワークフローで要るものはシークレットに置く
+  （Actions のログも公開される。シークレットの値はログで `***` に伏せられる）
+- コミットの作者のメールは GitHub の noreply（`3039555+highemerly@users.noreply.github.com`）にする
+  （設定は `docs/development.md`「ブランチと PR」）
 
 ## コマンド
 
