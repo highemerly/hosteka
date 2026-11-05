@@ -1,19 +1,32 @@
+# 開発用の Postgres。アプリは手元で `npm run dev` で動かす（docs/development.md「セットアップ」）。
+#
+#   docker compose up -d postgres
+#
+# 本番と同じイメージを手元で動かしたいときは e2e/compose.yml を使う
+# （偽の Fediverse サーバーまで一緒に立つ。docs/development.md「E2E」）。
+#
+# 版は本番の共有 Postgres（k8sg1 の CNPG。postgresql:15）に揃えたいが、手元のデータ（16 で
+# 作ったもの）の作り直しが要るので、まだ 16 のまま（Issue #14）。DB の名前も昔のプロジェクトの名前のまま。
 services:
-  # アプリケーション
-  app:
-    image: ghcr.io/highemerly/hosteka:v1.4.18
-    container_name: hosteka-app
+  postgres:
+    image: postgres:16
+    container_name: hosteka-postgres
+    command: postgres -c timezone=UTC
+    environment:
+      POSTGRES_DB: handon_login
+      POSTGRES_USER: handon_user
+      POSTGRES_PASSWORD: handon_password
+      TZ: UTC
+      PGTZ: UTC
     ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    restart: unless-stopped
+      - "5432:5432"
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+      test: ["CMD-SHELL", "pg_isready -U handon_user -d handon_login"]
+      timeout: 20s
+      retries: 10
+    restart: unless-stopped
     networks:
       - hosteka-network
 

@@ -57,8 +57,7 @@
     },
     {
       // 開発用・E2E 用の DB は本番の共有 Postgres（k8sg1）の版に合わせて手で上げる。
-      // docker-compose.yml の app は非公開のレジストリのイメージで、Renovate からは版を引けない。
-      matchFileNames: ['docker-compose.yml', 'docker-compose.override.yml', 'e2e/compose.yml'],
+      matchFileNames: ['docker-compose.yml', 'e2e/compose.yml'],
       enabled: false,
     },
   ],

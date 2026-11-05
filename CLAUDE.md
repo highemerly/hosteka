@@ -24,7 +24,7 @@ Mastodon・Misskey・Pleroma はサーバーごとにその場でアプリを登
 
 ## データベース
 
-PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-compose.override.yml` の `postgres` サービスを使う。
+PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-compose.yml` の `postgres` サービスを使う。
 スキーマを変えたら `npx prisma migrate dev` でマイグレーションを作る。
 
 **Prisma 7（重要・必ず守ること）**
