@@ -20,6 +20,8 @@ npm run dev                # http://localhost:3000
 
 - **main へは直接コミット・push しない。** 変更は必ずブランチを切り、PR → CI 緑 → squash マージで
   取り込む（依存の更新を Renovate の PR で回すので、人の変更も同じ経路に揃える）
+- PR は自分に assign する（`gh pr create --assignee @me`）。Renovate の PR とデプロイの PR も自動で assign される。
+  どのリポジトリの PR も github.com/pulls の「Assigned to you」にまとまるので、見落とさない
 - 手元: [.githooks/pre-commit](../.githooks/pre-commit) が main 上のコミットを拒否する。clone ごとに1回有効化する:
   ```bash
   git config core.hooksPath .githooks
