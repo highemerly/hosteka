@@ -126,7 +126,8 @@ export const PATCH = defineRoute({
     if (next === 'cancelled') {
       /*
         **キャンセルにしたら幹事も外す。** 幹事の権限は参加状態を見ないので、
-        残すと参加していない人が参加者を編集できる。
+        残すと参加していない人が参加者を編集できる。いまは幹事の行にキャンセルを
+        出さない（`allowedAdminActions`）ので、ここへ来るのは幹事でない人だけ。
       */
       const { count } = await prisma.eventParticipant.updateMany({
         where,

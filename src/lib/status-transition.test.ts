@@ -255,21 +255,26 @@ describe('allowedAdminActions', () => {
     }
   )
 
-  it('幹事なら幹事を解除する', () => {
-    expect(allowedAdminActions(person('attending', true), CREATOR)).toEqual([
-      'cancel',
-      'unassign_organizer',
-    ])
+  it('幹事は解除だけ。キャンセルにするなら、先に解除する', () => {
+    expect(allowedAdminActions(person('attending', true), CREATOR)).toEqual(['unassign_organizer'])
   })
 
   it('幹事の指定は作成者だけ。幹事が見ているときはキャンセルだけ', () => {
     expect(allowedAdminActions(person('attending'), ORGANIZER)).toEqual(['cancel'])
   })
 
-  it('作成者自身は幹事の指定の対象にならない', () => {
+  /*
+    キャンセルにすると幹事も外れる。作成者でない幹事がほかの幹事をキャンセルにできると、
+    作成者にしかできない「幹事を外す」ができてしまう。
+  */
+  it.each(['attending', 'maybe'] as const)('作成者でない幹事は、ほかの幹事（%s）に何もできない', (status) => {
+    expect(allowedAdminActions(person(status, true), ORGANIZER)).toEqual([])
+  })
+
+  it.each([CREATOR, ORGANIZER])('作成者の行には、誰が見ていても何も出さない', (viewer) => {
     expect(
-      allowedAdminActions({ status: 'attending', isOrganizer: false, isCreator: true }, CREATOR)
-    ).toEqual(['cancel'])
+      allowedAdminActions({ status: 'attending', isOrganizer: false, isCreator: true }, viewer)
+    ).toEqual([])
   })
 
   it.each(['not_attending', 'cancelled'] as const)('%s は削除だけ', (status) => {

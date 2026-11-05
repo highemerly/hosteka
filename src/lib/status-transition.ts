@@ -108,7 +108,8 @@ export const ADMIN_ACTION_TARGET: Partial<Record<ParticipantAdminAction, Partici
  * その参加者に対してできる操作。**画面のボタンもサーバーの判定もここから作る。**
  *
  *   - 参加リクエスト … 承認（→ 参加）か拒否（→ キャンセル）
- *   - 参加・未定     … キャンセルにする。作成者が見ているときは幹事の指定・解除も
+ *   - 参加・未定     … キャンセルにする。作成者が見ているときは幹事の指定・解除も。
+ *                      **幹事と作成者はキャンセルにできない**（下）
  *   - 欠席・キャンセル … 削除だけ。回答の記録ごと消す
  *
  * **参加へ引き上げられるのは承認だけ。** 規約への同意を取っているのは本人が
@@ -121,8 +122,12 @@ export const ADMIN_ACTION_TARGET: Partial<Record<ParticipantAdminAction, Partici
  * 消えた人は本人が一から登録し直せる。
  *
  * 幹事の指定は**作成者だけ**ができ、作成者自身は対象にならない。
- * 参加・未定の人だけが対象 — キャンセルに
- * すると幹事も外れる（参加していない人が参加者を編集できる状態を残さない）。
+ * 参加・未定の人だけが対象。
+ *
+ * **幹事と作成者の行には、誰が見ていても「キャンセルにする」を出さない。** キャンセルに
+ * すると幹事も外れるので、作成者でない幹事（グループのスタッフを含む）がほかの幹事を
+ * キャンセルにすると、作成者にしかできない「幹事を外す」ができてしまう。作成者が幹事を
+ * 参加から外したいときは、先に幹事を解除してからキャンセルにする。
  */
 export function allowedAdminActions(
   participant: { status: ParticipantStatus; isOrganizer: boolean; isCreator: boolean },
@@ -133,8 +138,9 @@ export function allowedAdminActions(
       return ['approve', 'reject']
     case 'attending':
     case 'maybe': {
-      if (!viewer.isCreator || participant.isCreator) return ['cancel']
-      return ['cancel', participant.isOrganizer ? 'unassign_organizer' : 'assign_organizer']
+      if (participant.isCreator) return []
+      if (participant.isOrganizer) return viewer.isCreator ? ['unassign_organizer'] : []
+      return viewer.isCreator ? ['cancel', 'assign_organizer'] : ['cancel']
     }
     case 'not_attending':
     case 'cancelled':
