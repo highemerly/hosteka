@@ -29,7 +29,7 @@
     "@tanstack/react-query": "^5.104.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cookies-next": "^6.0.0",
+    "cookies-next": "^6.1.1",
     "ics": "^3.8.1",
     "jose": "^6.0.11",
     "lucide-react": "^1.48.0",
