@@ -246,6 +246,8 @@ jobs:
           token: ${{ secrets.K8SG1_PAT }}
           branch: update-hosteka-${{ needs.build.outputs.version }}
           delete-branch: true
+          # マニフェストのリポジトリには PR が大量に来るので、自分に assign して「Assigned to you」で見落とさないようにする
+          assignees: ${{ github.repository_owner }}
           commit-message: Update hosteka to ${{ needs.build.outputs.version }}
           title: Update hosteka to ${{ needs.build.outputs.version }}
           body-path: ${{ runner.temp }}/pr-body.md

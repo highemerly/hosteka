@@ -29,6 +29,8 @@ npm run dev                # http://localhost:3000
   ```
 - サーバー側: GitHub の ruleset（定義は [.github/rulesets/main.json](../.github/rulesets/main.json)）が
   main への push を拒否する
+- PR は自分に assign する（`gh pr create --assignee @me`）。Renovate の PR とデプロイの PR も自動で assign される。
+  どのリポジトリの PR も github.com/pulls の「Assigned to you」にまとまるので、見落とさない
 
 ### ruleset の中身と理由
 
