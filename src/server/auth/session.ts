@@ -57,6 +57,11 @@ export async function getSessionClaims(): Promise<SessionClaimsCtx | null> {
  * ここでは users を1行引く（インデックス済みの主キー参照）。トークンに
  * username / server / platform を焼き込まない代わりの読み取りで、これらは
  * 参加可否を決める認可の入力なので常に最新である必要がある。
+ *
+ * **停止（BAN）された人のセッションはここで無効にする。** BAN はセッションを
+ * 失効させてから停止の行を作るが、それだけでは、失効の後に終わったログイン
+ * （BAN の判定を BAN の前に通り抜けたもの）のセッションが有効期限まで残る。
+ * 失効の伝播（最大1ポーリング間隔）も待たずに済む。同じ1行の読み取りで足りる。
  */
 export async function getSession(): Promise<Session | null> {
   const claims = await getSessionClaims()
@@ -70,10 +75,12 @@ export async function getSession(): Promise<Session | null> {
       server: true,
       platform: true,
       isAdmin: true,
+      ban: { select: { id: true } },
     },
   })
   // ユーザーが削除済みならセッションも無効
   if (!user) return null
+  if (user.ban) return null
 
   // 「最終利用」を進める。最大1時間に1回で、応答は待たせない
   touchSession(claims.sessionId)

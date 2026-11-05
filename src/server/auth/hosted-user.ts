@@ -67,9 +67,38 @@ const RESOLVED_USER_SELECT = {
   avatar: true,
   isAdmin: true,
   lastTermsAcceptedAt: true,
-  /** 停止の判定に使う。名前を変えて入り直しても、IDで見つかった行の停止は効く */
-  ban: { select: { id: true } },
 } as const
+
+/**
+ * 停止（BAN）された人のログインか。**`resolveHostedUser` より前に呼ぶ。**
+ *
+ * 後で判定すると、停止された人のログインでも行の名前・表示名・アイコンが
+ * 書き換わる（停止された人が、残っている参加の記録などに出る姿を変えられる）。
+ *
+ * **IDで見つかれば、その行の停止だけを見る。** 名前の停止で判定すると、停止された
+ * 人が手放した名前を取った別人まで締め出してしまう。名前で引くのは、IDで
+ * 見つからないとき（初めて入る人）だけで、停止された行が本人かどうかを
+ * IDで確かめられないとき（行が消えている・IDを持たない行）に限って断る。
+ */
+export async function isBannedHostedLogin(
+  input: Pick<HostedUserInput, 'server' | 'platformUserId' | 'username'>
+): Promise<boolean> {
+  const { server, platformUserId, username } = input
+
+  const byId = await prisma.user.findUnique({
+    where: { server_platformUserId: { server, platformUserId } },
+    select: { ban: { select: { id: true } } },
+  })
+  if (byId) return byId.ban !== null
+
+  const byName = await prisma.bannedUser.findUnique({
+    where: { username_server: { username, server } },
+    select: { user: { select: { platformUserId: true } } },
+  })
+  if (!byName) return false
+  // 停止された行がIDを持っていれば、IDで見つからなかった＝別人
+  return !byName.user?.platformUserId
+}
 
 export async function resolveHostedUser(input: HostedUserInput) {
   const { platform, server, platformUserId, username, displayName, avatar } = input
