@@ -62,6 +62,10 @@ PostgreSQL（全 DateTime 列は `TIMESTAMPTZ`）。開発環境では `docker-c
 - 全ルートが `defineRoute`（`src/server/http/define-route.ts`）に載っている。
   認証・入力検証（Zod）・エラー整形・レスポンス形の統一をここが引き受ける。
   **ルート内で認証チェックを手書きしない**（抜けが目視できなくなる）
+- **GET 以外は、`Origin` を公開URL（`NEXTAUTH_URL`）と突き合わせて別サイトからの要求を断る**
+  （`src/server/http/same-origin.ts`。CSRF の対策）。`defineRoute` が自動でやる。外にある
+  ルート（ログアウトなど）は先頭で `rejectCrossOrigin(request)` を呼ぶ（走査テストが見ている）。
+  手元では `NEXTAUTH_URL` と同じホスト名で開くこと（`127.0.0.1` で開くと変更が 403 になる）
 - 認証モードは `auth: 'none' | 'optional' | 'required' | 'admin' | 'cron'`。
   リソースID依存の権限判定（主催者かどうか等）は `guard` で合成する
 - **レスポンスは統一エンベロープ**:

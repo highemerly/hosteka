@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -140,6 +140,62 @@ describe('ガード', () => {
     const route = defineRoute({ auth: 'required', guard, handler: async () => ({}) })
     expect((await json(await route(makeRequest('/x')))).status).toBe(401)
     expect(guard).not.toHaveBeenCalled()
+  })
+})
+
+describe('別サイトからの変更（CSRF）', () => {
+  const SITE = 'https://hosteka.test'
+  const post = (origin?: string) =>
+    makeRequest('/x', { method: 'POST', headers: origin === undefined ? {} : { origin } })
+
+  beforeEach(() => {
+    vi.stubEnv('NEXTAUTH_URL', `${SITE}/`)
+    vi.stubEnv('CRON_SECRET', 'secret')
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('別のサイトの Origin は、認証より前に403で断る（ハンドラに届かない）', async () => {
+    const handler = vi.fn(async () => ({}))
+    const route = defineRoute({ auth: 'none', handler })
+    const { status, body } = await json(await route(post('https://evil.example')))
+    expect(status).toBe(403)
+    expect(body.error.code).toBe('FORBIDDEN')
+    expect(handler).not.toHaveBeenCalled()
+    expect(mockGetSession).not.toHaveBeenCalled()
+  })
+
+  it('Origin: null も断る', async () => {
+    const route = defineRoute({ auth: 'none', handler: async () => ({}) })
+    expect((await json(await route(post('null')))).status).toBe(403)
+  })
+
+  it('自分のサイトの Origin は通る（NEXTAUTH_URL の末尾の / は見ない）', async () => {
+    const route = defineRoute({ auth: 'none', handler: async () => ({}) })
+    expect((await json(await route(post(SITE)))).status).toBe(200)
+  })
+
+  it('Origin の無い要求（ブラウザ以外）は通る', async () => {
+    const route = defineRoute({ auth: 'none', handler: async () => ({}) })
+    expect((await json(await route(post()))).status).toBe(200)
+  })
+
+  it('読むだけの要求は Origin を見ない', async () => {
+    const route = defineRoute({ auth: 'none', handler: async () => ({}) })
+    const res = await route(makeRequest('/x', { headers: { origin: 'https://evil.example' } }))
+    expect((await json(res)).status).toBe(200)
+  })
+
+  it('cron は Origin を見ない（合言葉で確かめる）', async () => {
+    const route = defineRoute({ auth: 'cron', handler: async () => ({}) })
+    const res = await route(
+      makeRequest('/x', {
+        method: 'POST',
+        headers: { origin: 'https://evil.example', authorization: 'Bearer secret' },
+      })
+    )
+    expect((await json(res)).status).toBe(200)
   })
 })
 

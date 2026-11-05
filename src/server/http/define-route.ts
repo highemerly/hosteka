@@ -9,6 +9,7 @@ import { getSession, isAdminUser, type Session } from '@/server/auth/session'
 
 import { ApiError } from './errors'
 import { errorResponse, toApiError } from './response'
+import { crossOriginError, isCrossOriginWrite } from './same-origin'
 
 /**
  * ルートハンドラの共通処理。
@@ -148,6 +149,13 @@ export function defineRoute<
     const requestId = crypto.randomUUID()
 
     try {
+      // --- 出どころ ---------------------------------------------------
+      // 別サイトのページから送られた変更を断る（`same-origin.ts`）。
+      // cron はブラウザから来ないうえ、合言葉（Bearer）で確かめている
+      if (options.auth !== 'cron' && isCrossOriginWrite(request)) {
+        throw crossOriginError()
+      }
+
       // --- 認証 -------------------------------------------------------
       let session: Session | null = null
 

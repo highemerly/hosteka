@@ -52,6 +52,23 @@ describe('defineRoute に載っていないルート', () => {
     expect(outside).toEqual(Object.keys(INTENTIONALLY_EXCLUDED).sort())
   })
 
+  /*
+    **外したルートでも、変更を受け付けるものは出どころを確かめる**（`same-origin.ts`）。
+    `defineRoute` の中では自動で確かめるが、ここに並ぶものはそれを通らない。
+    ログアウトは Cookie を読まずに消すので、`SameSite` でも止まらない。
+  */
+  it('変更を受け付けるものは rejectCrossOrigin を呼ぶ', () => {
+    const writes = outside.filter((file) =>
+      /export (async )?(function|const) (POST|PUT|PATCH|DELETE)\b/.test(
+        readFileSync(join(API_ROOT, file), 'utf8')
+      )
+    )
+    expect(writes.length).toBeGreaterThan(0)
+    for (const file of writes) {
+      expect(readFileSync(join(API_ROOT, file), 'utf8'), file).toContain('rejectCrossOrigin(request)')
+    }
+  })
+
   it('除外には理由が書かれている', () => {
     for (const [file, reason] of Object.entries(INTENTIONALLY_EXCLUDED)) {
       expect(reason.length, file).toBeGreaterThan(10)

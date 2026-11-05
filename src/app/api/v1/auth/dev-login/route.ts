@@ -5,8 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { issueSessionJson } from '@/server/auth/oauth-callback'
 import { encryptAccessToken } from '@/lib/crypto'
 import { normalizeUsername, normalizeServer } from '@/lib/normalize'
+import { rejectCrossOrigin } from '@/server/http/same-origin'
 
 export async function POST(request: NextRequest) {
+  const rejected = rejectCrossOrigin(request)
+  if (rejected) return rejected
+
   // 厳密な開発環境チェック
   if (process.env.NODE_ENV !== 'development' || !process.env.DEV_MODE_ENABLED) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
