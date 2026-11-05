@@ -211,7 +211,8 @@ CI ワークフロー:
 - `.github/workflows/checks.yml` — **ゲートの単一の定義元**（vitest → eslint → tsc）。`workflow_call` 専用。ここ以外にゲートを書かない
 - `.github/workflows/e2e.yml` — 本番と同じイメージを Postgres と偽 Fediverse サーバー（`e2e/fakeverse/`）と起動して Playwright を回す（`e2e/`。画面の操作はしない。ログインと投稿は Mastodon / Misskey だけ）
 - `.github/workflows/ci.yml` — main 以外のブランチへの push で、差分が影響しうるジョブだけを実行（判定は `.github/scripts/ci-targets.sh`）。結果は `ci-result` に集まり、main の必須チェックはこれだけ
-- `.github/workflows/docker-build.yml` — `v*` タグ push で `checks` とビルドを並列に回し、push したイメージで `e2e` も回す。**全部緑のときだけ** GitHub Release（自動生成のノート）とマニフェストのリポジトリ（非公開）への PR を作る
+- `.github/workflows/docker-build.yml` — `v*` タグ push（か Tag a release からの呼び出し）で `checks` とビルドを並列に回し、push したイメージで `e2e` も回す。**全部緑のときだけ** GitHub Release（自動生成のノート）とマニフェストのリポジトリ（非公開）への PR を作る
+- `.github/workflows/tag-release.yml` — リリースの出し方（Actions の画面の Tag a release。上げ方を選ぶと次の版のタグを打って docker-build.yml を呼ぶ）。版はタグだけに持つ
 
 ## 保存期間（重要）
 
