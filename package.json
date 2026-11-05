@@ -23,7 +23,7 @@
     "seed:mock-pre-event": "npx tsx prisma/seed-mock-pre-event.ts"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.2",
+    "@hookform/resolvers": "^7.0.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@tanstack/react-query": "^5.104.0",
