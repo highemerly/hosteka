@@ -2,10 +2,11 @@ import 'server-only'
 
 import type { Metadata } from 'next'
 
+import { getBaseUrl } from '@/lib/base-url'
 import { prisma } from '@/lib/prisma'
 import { toJST } from '@/lib/event-date-utils'
+import { OG_SIZE } from '@/lib/og/size'
 import { missingMetadata, privateMetadata, UNLISTED_ROBOTS } from './hidden'
-import { defaultOgImages, twitterCard } from '@/lib/og/default'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -32,6 +33,7 @@ export async function getPreEventMetadata(id: string): Promise<Metadata> {
       isPublic: true,
       isHighlighted: true,
       isDisabled: true,
+      updatedAt: true,
       dateOptions: {
         select: { startDate: true },
         orderBy: { displayOrder: 'asc' },
@@ -70,6 +72,17 @@ export async function getPreEventMetadata(id: string): Promise<Metadata> {
   if (preEvent.location) info.push(`場所: ${preEvent.location}`)
   if (info.length > 0) description = `${description} ${info.join(' ')}`
 
+  /*
+    リンクカードの画像（`app/og/pre-events/[id]`）。イベントと同じく絶対URLで書き、
+    版（updatedAt）を付けて、編集したら別の URL になるようにする（`server/metadata/event.ts`）。
+  */
+  const image = {
+    url: `${getBaseUrl()}/og/pre-events/${encodeURIComponent(id)}?v=${preEvent.updatedAt.getTime()}`,
+    width: OG_SIZE.width,
+    height: OG_SIZE.height,
+    alt: preEvent.title,
+  }
+
   return {
     title: `${preEvent.title} - Hosteka (SNSコミュニティのためのイベントプラットフォーム)`,
     description,
@@ -80,9 +93,8 @@ export async function getPreEventMetadata(id: string): Promise<Metadata> {
       description,
       type: 'website',
       locale: 'ja_JP',
-      // 日程調整の専用の画像を作るまでは、サイト共通の画像
-      images: defaultOgImages(),
+      images: [image],
     },
-    twitter: { card: twitterCard(defaultOgImages()), title: preEvent.title, description },
+    twitter: { card: 'summary_large_image', title: preEvent.title, description, images: [image.url] },
   }
 }
