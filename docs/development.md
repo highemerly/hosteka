@@ -170,8 +170,8 @@ docker compose -f e2e/compose.yml down -v
 
 ## リリース
 
-1. バージョンの bump もブランチ → PR でマージする（`release/vX.Y.Z`。CI は何も回さない）。
-   マージ後の main にタグを打って push する（タグは ruleset の対象外）:
+1. **版はタグだけに持つ**（package.json に `version` を書かない。アプリは版を読んでいない）。
+   main にタグを打って push する（タグは ruleset の対象外）:
    ```bash
    git switch main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z
    ```
