@@ -18,6 +18,7 @@ const SECRET = {
   title: '退職祝いサプライズ',
   description: '田中さんには内緒で',
   location: '田中さん自宅',
+  updatedAt: new Date('2026-09-01T00:00:00Z'),
 }
 
 beforeEach(() => {
@@ -32,7 +33,6 @@ function allText(meta: unknown): string {
 describe('非公開のイベントのメタデータ', () => {
   beforeEach(() => {
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -64,7 +64,6 @@ describe('公開のイベントのリンクカードの画像', () => {
   beforeEach(() => {
     vi.stubEnv('NEXTAUTH_URL', 'https://hosteka.test')
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -120,12 +119,44 @@ describe('非公開の日程調整のメタデータ', () => {
     const meta = await getPreEventMetadata('p1')
     expect(meta.robots).toEqual({ index: false, follow: false })
   })
+
+  it('日程調整固有のリンクカードの画像は載せない', async () => {
+    const meta = await getPreEventMetadata('p1')
+    expect(JSON.stringify(meta.openGraph?.images ?? [])).not.toContain('/og/pre-events/')
+  })
+})
+
+describe('公開の日程調整のリンクカードの画像', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXTAUTH_URL', 'https://hosteka.test')
+    prismaMock.preEvent.findUnique.mockResolvedValue({
+      ...SECRET,
+      isPublic: true,
+      isHighlighted: true,
+      isDisabled: false,
+      dateOptions: [{ startDate: new Date('2026-06-15T10:00:00+09:00') }],
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('版の付いた絶対URLで載せる', async () => {
+    const meta = await getPreEventMetadata('p1')
+    expect(meta.openGraph?.images).toEqual([
+      expect.objectContaining({
+        url: `https://hosteka.test/og/pre-events/p1?v=${SECRET.updatedAt.getTime()}`,
+        width: 1200,
+        height: 630,
+      }),
+    ])
+    expect(meta.twitter).toMatchObject({ card: 'summary_large_image' })
+  })
 })
 
 describe('公開されているものは中身を出す', () => {
   it('イベントは題名を出す', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -153,7 +184,6 @@ describe('公開されているものは中身を出す', () => {
 describe('掲載中のもの', () => {
   it('イベントは検索避けを付けない', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -184,7 +214,6 @@ describe('掲載中のもの', () => {
 describe('一覧に載せないイベントのメタデータ', () => {
   beforeEach(() => {
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
@@ -228,7 +257,6 @@ describe('一覧に載せない日程調整のメタデータ', () => {
 describe('無効化されたもの', () => {
   it('イベントは中身を出さない', async () => {
     prismaMock.event.findUnique.mockResolvedValue({
-      updatedAt: new Date('2026-09-01T00:00:00Z'),
       ...SECRET,
       startDate: new Date('2026-06-15T10:00:00+09:00'),
       endDate: null,
