@@ -56,7 +56,7 @@
       enabled: false,
     },
     {
-      // 開発用・E2E 用の DB は本番の共有 Postgres（k8sg1）の版に合わせて手で上げる。
+      // 開発用・E2E 用の DB は本番の共有 Postgres の版に合わせて手で上げる。
       matchFileNames: ['docker-compose.yml', 'e2e/compose.yml'],
       enabled: false,
     },

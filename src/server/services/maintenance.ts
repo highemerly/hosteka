@@ -5,7 +5,7 @@ import { purgeOldRecords, type PurgeResult } from './purge-old-records'
 
 /**
  * 定期的な後片付け。k8s の CronJob が2時間おきに `POST /api/v1/cron/maintenance` を叩く
- * （`k8sg1` の `manifests/hosteka/prd/cronjob.yaml`）。手元からは `npm run cron:maintenance`。
+ * （CronJob の定義はマニフェストのリポジトリにある）。手元からは `npm run cron:maintenance`。
  *
  * **cron はこの1本だけにする。** 定期的にやることが増えたら、ここに足す。
  *

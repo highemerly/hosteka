@@ -15,7 +15,7 @@ import net from 'net'
  *
  * 入力の正規表現（`schemas/auth.ts` の `serverHost`）は末尾を英字に
  * 強制するので IP リテラルは入ってこない。**残るのは名前で届く経路** —
- * `metadata.google.internal`、`redis.hosteka.svc.cluster.local`、
+ * `metadata.google.internal`、`redis.default.svc.cluster.local`、
  * ワイルドカード DNS の `10-42-0-7.nip.io` など。名前を解決して
  * 当たり先を見るまで判断できない。
  *

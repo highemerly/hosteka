@@ -233,7 +233,7 @@ describe('接続先の確認', () => {
     checkOutboundHost.mockResolvedValue('blocked-name' as never)
 
     const result = await post(platform, {
-      server: 'redis.hosteka.svc.cluster.local',
+      server: 'redis.default.svc.cluster.local',
       callbackUrl: '/',
       termsAccepted: true,
     })

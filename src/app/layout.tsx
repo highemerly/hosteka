@@ -90,8 +90,8 @@ export default async function RootLayout({
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/*
-          RUM（next-rum）。`/_n-rum/` は Next へ届かない — k8sg1 の
-          `manifests/hosteka/prd/ingressroute.yaml` がコレクタへ回している。
+          RUM（next-rum）。`/_n-rum/` は Next へ届かない — 本番のルーティング（マニフェストの
+          リポジトリ）がコレクタへ回している。
           開発環境では誰も受けないので出さない。
           next/script にしないのは、afterInteractive では計測の登録が
           最初の描画に間に合わないから。GPC を有効にしたブラウザでは

@@ -18,7 +18,7 @@ beforeEach(() => {
 describe('isBlockedHostname', () => {
   it.each([
     'localhost',
-    'redis.hosteka.svc.cluster.local',
+    'redis.default.svc.cluster.local',
     'metadata.google.internal',
     'printer.local',
     'db.private',
@@ -118,7 +118,7 @@ describe('checkOutboundHost', () => {
   })
 
   it('名前の形で断れるものは、引かずに断る', async () => {
-    expect(await checkOutboundHost('redis.hosteka.svc.cluster.local')).toBe('blocked-name')
+    expect(await checkOutboundHost('redis.default.svc.cluster.local')).toBe('blocked-name')
     expect(lookup).not.toHaveBeenCalled()
   })
 

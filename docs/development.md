@@ -182,15 +182,26 @@ docker compose -f e2e/compose.yml down -v
       `NEXTAUTH_URL` として渡す（静的なページにリンクカードの画像の絶対URLを焼き込むため）。**イメージは検査の結果を待たずに push され、
       `latest` も動く。本番は版を固定していて、`latest` はデプロイに使わない**
    3. 全部が緑のときだけ **GitHub Release** を作る（タグごと・パッチも含む）。Release がある版＝デプロイしてよい版
-   4. 同じ条件で、k8s のマニフェスト（k8sg1-repo）へ「Update hosteka to X.Y.Z」の PR を出す（ラベル `app-update`）
-3. **k8sg1 の PR のマージがそのまま本番へのデプロイになる**（Flux が約1分で反映）。k8sg1 には必須チェックが無いので、
-   k8sg1 の CI が緑かを目で見てからマージする
+   4. 同じ条件で、マニフェストのリポジトリ（非公開）へ「Update hosteka to X.Y.Z」の PR を出す（ラベル `app-update`）
+3. **マニフェストのリポジトリの PR のマージがそのまま本番へのデプロイになる**（Flux が約1分で反映）。
+   あちらには必須チェックが無いので、CI が緑かを目で見てからマージする
+
+### シークレット
+
+マニフェストのリポジトリの名前とパスは**ワークフローに書かない**。このリポジトリは公開で、
+ワークフローのファイルも Actions のログも誰でも読める（シークレットの値はログで `***` に伏せられる）。
+
+| シークレット | 中身 |
+|---|---|
+| `K8SG1_REPO` | マニフェストのリポジトリ（`owner/name`） |
+| `K8SG1_MANIFEST_PATHS` | 書き換える prd のマニフェストのパス（スペース区切り） |
+| `K8SG1_PAT` | マニフェストのリポジトリへ PR を出すトークン（Contents と Pull requests の Read and write） |
 
 ### GitHub Release のノート
 
 GitHub の自動生成（前回のタグからマージされた PR の一覧と Full Changelog・英語）。分類は
 [.github/release.yml](../.github/release.yml) で、Renovate の PR（`dependencies` ラベル）を
-`Dependencies` に、それ以外を `Changes` に分ける。同じノートを k8sg1 の PR 本文にも使う。
+`Dependencies` に、それ以外を `Changes` に分ける。同じノートをデプロイの PR の本文にも使う。
 
 - **前回のタグを明示している**（`previous_tag_name`）。省くと GitHub は前回の「Release」を起点にするが、
   v2.0.1 以前は Release を作っていない
@@ -198,16 +209,16 @@ GitHub の自動生成（前回のタグからマージされた PR の一覧と
 
 ### マイグレーション
 
-**マイグレーションは自動では走らない。** k8sg1 の PR に `requires-migration` が付いていたら、
-DB のバックアップを取り、port-forward して手元から `npm run deploy:migrate` を当ててから
-PR をマージする（順番は「マイグレーション → イメージ差し替え」。PR の本文にコマンドが載る）。
+**マイグレーションは自動では走らない。** デプロイの PR に `requires-migration` が付いていたら、
+DB のバックアップを取り、手元から本番の DB へ `npm run deploy:migrate` を当ててから PR をマージする
+（順番は「マイグレーション → イメージ差し替え」）。本番の DB への繋ぎ方は、マニフェストのリポジトリの手順書にある。
 
 **列やテーブルを消すマイグレーションは2回に分ける。** 当ててから差し替えるまでの間、
 古いコードが消えた列を読んで止まる。それを読まない版を先に出してから当てる。
 
 ### うまくいかないとき
 
-- **k8sg1 に PR が出ない**: `create-k8s-pr` のログを見る。マニフェストの `image:` の行が書き換わらなかった
+- **デプロイの PR が出ない**: `create-k8s-pr` のログを見る。マニフェストの `image:` の行が書き換わらなかった
   （マニフェストの書式が変わった）ときは、わざと赤で止めている。検査が赤なら、そもそも `release` と
   `create-k8s-pr` は動かない
 - **イメージを作り直したい**: Actions から docker-build.yml を手で実行する（`workflow_dispatch`）。

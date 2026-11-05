@@ -5,7 +5,7 @@
 # 本番と同じイメージを手元で動かしたいときは e2e/compose.yml を使う
 # （偽の Fediverse サーバーまで一緒に立つ。docs/development.md「E2E」）。
 #
-# 版は本番の共有 Postgres（k8sg1 の CNPG。postgresql:15）に揃えたいが、手元のデータ（16 で
+# 版は本番の共有 Postgres（postgresql:15）に揃えたいが、手元のデータ（16 で
 # 作ったもの）の作り直しが要るので、まだ 16 のまま（Issue #14）。DB の名前も昔のプロジェクトの名前のまま。
 services:
   postgres:
