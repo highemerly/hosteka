@@ -1,82 +1,61 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { prismaMock, resetPrismaMock } from '@/test/contract'
+vi.mock('@/server/sitemap', () => ({ buildSitemap: vi.fn() }))
 
-vi.mock('@/lib/prisma', async () => ({
-  prisma: (await import('@/test/contract')).prismaMock,
-}))
+import { buildSitemap } from '@/server/sitemap'
 
-const ORIGINAL_URL = process.env.NEXTAUTH_URL
-process.env.NEXTAUTH_URL = 'https://hosteka.test'
+/**
+ * **組み立てた結果を1時間覚えておく**（無認証で叩ける口が、毎回 DB を引かないように）。
+ * 中身は `server/sitemap.test.ts`。
+ */
 
-import sitemap from './sitemap'
+const build = vi.mocked(buildSitemap)
+const ENTRY = [{ url: 'https://hosteka.test' }]
 
-afterAll(() => {
-  process.env.NEXTAUTH_URL = ORIGINAL_URL
-})
+// 覚えた結果はモジュールに残るので、テストごとに読み直す
+async function load() {
+  vi.resetModules()
+  return (await import('./sitemap')).default
+}
 
 beforeEach(() => {
-  resetPrismaMock()
-  prismaMock.event.findMany.mockResolvedValue([])
-  prismaMock.preEvent.findMany.mockResolvedValue([])
-  prismaMock.announcement.findMany.mockResolvedValue([])
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-11-06T12:00:00+09:00'))
+  build.mockReset()
+  build.mockResolvedValue(ENTRY)
+})
+afterEach(() => {
+  vi.useRealTimers()
 })
 
-describe('sitemap', () => {
-  it('イベントが1件も無くても静的なページは載せる', async () => {
-    const urls = (await sitemap()).map((entry) => entry.url)
-
-    expect(urls).toContain('https://hosteka.test')
-    expect(urls).toContain('https://hosteka.test/events')
-    expect(urls).toContain('https://hosteka.test/pre-events')
-    expect(urls).toContain('https://hosteka.test/faq')
+describe('sitemap.xml', () => {
+  it('1時間以内なら、組み立て直さずに同じ結果を返す', async () => {
+    const sitemap = await load()
+    expect(await sitemap()).toBe(ENTRY)
+    vi.advanceTimersByTime(59 * 60 * 1000)
+    expect(await sitemap()).toBe(ENTRY)
+    expect(build).toHaveBeenCalledTimes(1)
   })
 
-  it('ログインが要る画面は載せない。開いてもログイン画面にしかならない', async () => {
-    const urls = (await sitemap()).map((entry) => entry.url)
-
-    for (const path of ['/dashboard', '/admin', '/account', '/auth/signin', '/events/create']) {
-      expect(urls).not.toContain(`https://hosteka.test${path}`)
-    }
-  })
-
-  it('公開条件は一覧と同じものを使う。sitemap 経由でだけ索引される事故を防ぐ', async () => {
+  it('1時間たったら組み立て直す', async () => {
+    const sitemap = await load()
     await sitemap()
-
-    const where = prismaMock.event.findMany.mock.calls[0][0].where
-    expect(where.AND).toContainEqual({ isDisabled: false })
-    expect(where.AND).toContainEqual({ isPublic: true })
-    expect(where.AND).toContainEqual({ isHighlighted: true })
-    expect(where.AND).toContainEqual({ status: { not: 'cancelled' } })
-
-    const preWhere = prismaMock.preEvent.findMany.mock.calls[0][0].where
-    expect(preWhere.AND).toContainEqual({ isDisabled: false })
-    expect(preWhere.AND).toContainEqual({ isPublic: true })
-    expect(preWhere.AND).toContainEqual({ isHighlighted: true })
-  })
-
-  it('終わったものは載せない', async () => {
+    vi.advanceTimersByTime(60 * 60 * 1000)
     await sitemap()
-
-    const where = prismaMock.event.findMany.mock.calls[0][0].where
-    // endDate があればそれ、無ければ startDate で「まだ先か」を見る
-    expect(JSON.stringify(where.AND)).toContain('endDate')
-
-    const preWhere = prismaMock.preEvent.findMany.mock.calls[0][0].where
-    expect(JSON.stringify(preWhere.AND)).toContain('dateOptions')
+    expect(build).toHaveBeenCalledTimes(2)
   })
 
-  it('公開イベントを絶対URLで載せ、更新日を添える', async () => {
-    const updatedAt = new Date('2026-09-01T12:00:00+09:00')
-    prismaMock.event.findMany.mockResolvedValue([{ id: 'evt_1', updatedAt }])
+  it('同時に来ても、組み立てるのは1回', async () => {
+    const sitemap = await load()
+    await Promise.all([sitemap(), sitemap(), sitemap()])
+    expect(build).toHaveBeenCalledTimes(1)
+  })
 
-    const entry = (await sitemap()).find((e) => e.url.endsWith('/events/evt_1'))
-
-    expect(entry).toEqual(
-      expect.objectContaining({
-        url: 'https://hosteka.test/events/evt_1',
-        lastModified: updatedAt,
-      })
-    )
+  it('失敗は覚えない。次の要求で組み立て直す', async () => {
+    const sitemap = await load()
+    build.mockRejectedValueOnce(new Error('db down'))
+    await expect(sitemap()).rejects.toThrow('db down')
+    expect(await sitemap()).toBe(ENTRY)
+    expect(build).toHaveBeenCalledTimes(2)
   })
 })
