@@ -30,9 +30,16 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => params,
 }))
 
+/** ログイン中のアカウント（viewer cookie）。既定は未ログイン */
+let viewer: { platform: string; server: string } | null = null
+vi.mock('@/hooks/useViewer', () => ({
+  useViewer: () => ({ viewer, status: viewer ? 'authed' : 'anonymous' }),
+}))
+
 beforeEach(() => {
   localStorage.clear()
   params = new URLSearchParams()
+  viewer = null
   post.mockReset()
   post.mockResolvedValue({ authUrl: 'https://mastodon.social/oauth/authorize?x=1' })
   vi.stubGlobal('location', { href: '' })
@@ -99,6 +106,7 @@ describe('ログイン画面', () => {
   }
 
   it('取り直しでは、何を付与するかを明記し、アカウントは聞かない。同意は聞く', () => {
+    viewer = { platform: 'mastodon', server: 'handon.club' }
     params = new URLSearchParams(UPGRADE)
     render(<SignInScreen />)
 
@@ -114,6 +122,7 @@ describe('ログイン画面', () => {
   })
 
   it('取り直しでは、URL のアカウントで投稿の権限を頼む', async () => {
+    viewer = { platform: 'mastodon', server: 'handon.club' }
     params = new URLSearchParams(UPGRADE)
     render(<SignInScreen />)
     agree()
@@ -130,12 +139,43 @@ describe('ログイン画面', () => {
   })
 
   it('取り直しでも、同意しないまま押すと送らない', () => {
+    viewer = { platform: 'mastodon', server: 'handon.club' }
     params = new URLSearchParams(UPGRADE)
     render(<SignInScreen />)
     submit()
 
     expect(post).not.toHaveBeenCalled()
     expect(screen.getByRole('alert').textContent).toBe('利用規約への同意が必要です')
+  })
+
+  /*
+    **URL は誰でも作れる。** ログイン中のアカウントと一致しなければ、選ぶ欄を
+    隠さず、URL のサーバーも入れない（見知らぬサーバーの認可画面へ送らせない）。
+  */
+  it('取り直しでも、URL のサーバーがログイン中のアカウントと違えば、選ばせて、URL のサーバーは入れない', () => {
+    viewer = { platform: 'mastodon', server: 'handon.club' }
+    params = new URLSearchParams({ ...UPGRADE, server: 'evil.example' })
+    render(<SignInScreen />)
+
+    expect(screen.queryByText('再ログインして投稿権限を付与します')).toBeNull()
+    expect(screen.queryByText(/evil\.example/)).toBeNull()
+    expect((screen.getByLabelText(/ホスト名/) as HTMLInputElement).value).toBe('')
+  })
+
+  it('取り直しでも、ログインしていなければ選ばせる', () => {
+    params = new URLSearchParams(UPGRADE)
+    render(<SignInScreen />)
+
+    expect(screen.queryByText('再ログインして投稿権限を付与します')).toBeNull()
+    expect((screen.getByLabelText(/ホスト名/) as HTMLInputElement).value).toBe('')
+  })
+
+  it('取り直しでも、ログイン中のプラットフォームが違えば選ばせる', () => {
+    viewer = { platform: 'misskey', server: 'handon.club' }
+    params = new URLSearchParams(UPGRADE)
+    render(<SignInScreen />)
+
+    expect(screen.queryByText('再ログインして投稿権限を付与します')).toBeNull()
   })
 
   it('取り直しでも URL にサーバーが無ければ、ふつうのログインと同じく選ばせる', () => {

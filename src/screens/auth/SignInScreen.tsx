@@ -13,6 +13,7 @@ import { PRIVACY_TITLE, PrivacyDocument } from '@/components/legal/PrivacyDocume
 import { TERMS_TITLE, TermsDocument } from '@/components/legal/TermsDocument'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useViewer } from '@/hooks/useViewer'
 import { api, ApiClientError } from '@/lib/api/client'
 import { oauthGrants, type OAuthGrant } from '@/lib/oauth-scopes'
 import { readRememberedServer, rememberServer } from '@/lib/remembered-server'
@@ -115,8 +116,10 @@ export default function SignInScreen() {
    */
   const upgrading = searchParams.get('requestWrite') === 'true'
 
-  const [platform, setPlatform] = React.useState<LoginPlatform | null>(urlPlatform)
-  const [server, setServer] = React.useState(urlServer)
+  // プラットフォームは URL から選んでおく（選び直せる）。**サーバーは URL から入れない** —
+  // 入っていれば、そのまま見知らぬサーバーへ送られかねない（下の fixed を参照）
+  const [picked, setPlatform] = React.useState<LoginPlatform | null>(urlPlatform)
+  const [typed, setServer] = React.useState('')
   const [agreed, setAgreed] = React.useState(false)
   /** 同意しないまま押された。箱の下に吹き出しを出す */
   const [consentMissing, setConsentMissing] = React.useState(false)
@@ -140,7 +143,7 @@ export default function SignInScreen() {
     scrollToNextStep(nextStepRef.current)
   })
 
-  const spec = findPlatform(platform)
+  const { viewer } = useViewer()
   /**
    * 投稿権限の取り直しで、アカウントが URL で決まっている。
    *
@@ -149,12 +152,26 @@ export default function SignInScreen() {
    * 別のアカウントでログインし直すだけになり、権限は元のアカウントに付かない。
    * 利用規約への同意は、取り直しでも聞く（ふつうのログインと同じ）。
    *
-   * URL に足りないもの（予約投稿の画面から古いリンクで来た、など）が
-   * あれば、ふつうのログインと同じ画面に倒す。
+   * **URL のアカウントは、ログイン中のアカウントと一致するときだけ使う。**
+   * URL は誰でも作れる。一致を見ないと、選ぶ欄を隠したまま、見知らぬ
+   * サーバーの認可画面へ連れて行く URL が作れてしまう。一致しなければ
+   * （ログインが切れた・別のアカウントになっている・URL に足りないものがある）、
+   * URL のアカウントは使わず、ふつうのログインと同じ画面に倒す。
+   * viewer cookie はマウント後に読むので、一致が分かるのも1フレーム後になる。
    */
   const urlSpec = findPlatform(urlPlatform)
-  const fixedAccount =
-    upgrading && !!urlSpec?.canRequestWrite && (!urlSpec.needsServer || !!urlServer)
+  const fixed =
+    upgrading &&
+    urlSpec?.canRequestWrite &&
+    viewer &&
+    viewer.platform.toLowerCase() === urlSpec.value &&
+    (!urlSpec.needsServer || normalizeServerHost(urlServer) === viewer.server)
+      ? { spec: urlSpec, server: viewer.server }
+      : null
+  const fixedAccount = fixed !== null
+  const platform = fixed ? fixed.spec.value : picked
+  const server = fixed ? fixed.server : typed
+  const spec = findPlatform(platform)
   const write = !!spec?.canRequestWrite && upgrading
   const grants = spec ? oauthGrants(spec.value, write) : []
   const reason = signInReason(searchParams.get('callbackUrl'))
@@ -196,7 +213,7 @@ export default function SignInScreen() {
     setServerError('')
     // 覚えているサーバーは上の effect が入れる。ここで空にしておかないと、
     // 前に選んでいたプラットフォームのホスト名が残る
-    setServer(next === urlPlatform ? urlServer : '')
+    setServer('')
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -230,8 +247,6 @@ export default function SignInScreen() {
     try {
       const { authUrl } = await api.post<{ authUrl: string }>(spec.endpoint, {
         callbackUrl,
-        // 同意はここでしか取らない。**サーバーもこれを必須にしている**
-        // （`requireTermsAccepted`）ので、画面のチェックだけの約束にしない
         // 同意はここでしか取らない。**サーバーもこれを必須にしている**
         // （`requireTermsAccepted`）ので、画面のチェックだけの約束にしない
         termsAccepted: agreed,
@@ -302,11 +317,11 @@ export default function SignInScreen() {
           読み取り／投稿も、アカウントも選ばせないので、ここで言わなければ
           知らないまま渡すことになる。どのアカウントかまで言う。
         */}
-        {fixedAccount && urlSpec ? (
+        {fixed ? (
           <Notice tone="attention" title="再ログインして投稿権限を付与します">
-            {urlSpec.needsServer
-              ? `${urlServer} の ${urlSpec.label} アカウントに、Hosteka から投稿する権限を付与します。`
-              : `${urlSpec.label} アカウントに、Hosteka から投稿する権限を付与します。`}
+            {fixed.spec.needsServer
+              ? `${fixed.server} の ${fixed.spec.label} アカウントに、Hosteka から投稿する権限を付与します。`
+              : `${fixed.spec.label} アカウントに、Hosteka から投稿する権限を付与します。`}
           </Notice>
         ) : null}
 
