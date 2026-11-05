@@ -170,12 +170,23 @@ docker compose -f e2e/compose.yml down -v
 
 ## リリース
 
-1. バージョンの bump もブランチ → PR でマージする（`release/vX.Y.Z`。CI は何も回さない）。
-   マージ後の main にタグを打って push する（タグは ruleset の対象外）:
+1. **Actions の画面の「Tag a release」で出す**（[tag-release.yml](../.github/workflows/tag-release.yml)）。
+   上げ方（patch・minor・major）を選んで main で実行すると、前回のタグから次の版を計算して main の先頭に
+   タグを打ち、docker-build.yml を呼ぶ。手元からでも同じ:
    ```bash
-   git switch main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z
+   gh workflow run tag-release.yml --ref main -f bump=patch
    ```
-2. タグの push で [docker-build.yml](../.github/workflows/docker-build.yml) が動く:
+   - **版はタグだけに持つ**（package.json に `version` を書かない。アプリは版を読んでいない）。bump の PR は要らない
+   - 前回のタグからコミットが無ければ止まる。main 以外から実行しても止まる
+   - 手元でタグを打って push しても同じことが起きる（`git tag vX.Y.Z && git push origin vX.Y.Z`。タグは ruleset の対象外）
+
+   | 上げ方 | いつ |
+   |---|---|
+   | patch | 修正と依存の更新だけ |
+   | minor | 新しい機能（利用者・運用者から見てできることが増えた） |
+   | major | 互換性を崩す |
+
+2. [docker-build.yml](../.github/workflows/docker-build.yml) が動く:
    1. **検査を全部回す**（ブランチで差分により省いたものも）。checks はビルドと並走し、
       E2E は **push したイメージそのもの**で回す（作り直したイメージで通っても、デプロイするものの確認にならない）
    2. イメージを `X.Y.Z`・`X.Y`・`latest` で GHCR へ push する。ビルドのときに公開URL（`PUBLIC_URL`）を
@@ -221,6 +232,7 @@ DB のバックアップを取り、手元から本番の DB へ `npm run deploy
 - **デプロイの PR が出ない**: `create-k8s-pr` のログを見る。マニフェストの `image:` の行が書き換わらなかった
   （マニフェストの書式が変わった）ときは、わざと赤で止めている。検査が赤なら、そもそも `release` と
   `create-k8s-pr` は動かない
-- **イメージを作り直したい**: Actions から docker-build.yml を手で実行する（`workflow_dispatch`）。
-  入力はそのままイメージタグと k8s マニフェストの版になるので、`v` を付けずに `2.0.2` のように入れる。
-  このときは GitHub Release を作らない（タグが無い・既にある）
+- **途中で落ちた（一時的な失敗）**: Actions の画面で、その実行を Re-run する。手で docker-build.yml を
+  走らせる口（`workflow_dispatch`）は置いていない（任意のブランチ・任意の名前でデプロイの PR まで出せてしまうため）
+- **Tag a release が起動時に落ちる**: 呼ぶ側（tag-release.yml の `release` ジョブ）の `permissions` が、呼ばれる側の
+  ジョブが使う権限の和になっているかを見る（`contents: write`・`packages: write`）

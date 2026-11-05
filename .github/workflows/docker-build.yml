@@ -4,13 +4,15 @@ on:
   push:
     tags:
       - 'v*'
-  # 作り直し用。入力はそのままイメージタグと k8s マニフェストの版になる（`v` は外れない）ので、
-  # タグ push 時と揃えて `v` を付けずに入れる。既定値は置かない（以前は latest で、そのまま実行すると
-  # マニフェストが :latest になり得た）。
-  workflow_dispatch:
+  # Tag a release（tag-release.yml）がタグを打ってから呼ぶ。GITHUB_TOKEN で push したタグでは
+  # 上の on: push が起動しないため（二重にも走らない）。
+  # 失敗した実行の作り直しは、Actions の画面の Re-run で行う（以前の workflow_dispatch はやめた。
+  # 任意のブランチ・任意の名前でデプロイの PR まで出せてしまうため）。
+  workflow_call:
     inputs:
-      tag:
-        description: 'Image tag without "v" (e.g., 2.0.2)'
+      version:
+        description: 'Version without "v" (e.g., 2.0.4). The tag vX.Y.Z must already point at github.sha'
+        type: string
         required: true
 
 env:
@@ -45,7 +47,7 @@ jobs:
       packages: write
     outputs:
       version: ${{ steps.version.outputs.version }}
-      # E2E が pull するイメージ（metadata-action の {{version}} / workflow_dispatch の tag と同じ値）
+      # E2E が pull するイメージ（metadata-action の {{version}} と同じ値）
       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
       # release のノートの起点。前回のタグが無ければ空
       prev_tag: ${{ steps.prev.outputs.prev_tag }}
@@ -70,17 +72,12 @@ jobs:
 
       # 入力は `${{ }}` で run: に直接埋めない（シェルの文字列として解釈され、
       # 値に `"` や `$(...)` があればそのまま実行される）。環境変数で渡す
+      # workflow_call で呼ばれたときは github.ref が main なので、ref からは版が取れない。入力を優先する
       - name: Extract version
         id: version
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_TAG: ${{ github.event.inputs.tag }}
-        run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "version=$INPUT_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
-          fi
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "version=${INPUT_VERSION:-${GITHUB_REF#refs/tags/v}}" >> "$GITHUB_OUTPUT"
 
       - name: Find previous tag and migration changes
         id: prev
@@ -100,11 +97,13 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # 版は value で渡す（workflow_call では ref が main で、ref からは取れない）。
+          # latest は下で明示するので、metadata-action の自動の latest は切る
+          flavor: latest=false
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
+            type=raw,value=latest
 
       # Dockerfile の RUN --mount=type=cache（npm・.next/cache）は type=registry のキャッシュでは
       # 永続化されないので、actions/cache 経由で往復させて Next.js のビルドを差分化する
@@ -150,7 +149,6 @@ jobs:
     steps:
       # 前回のタグは明示する。省くと GitHub は前回の「Release」を起点にするが、
       # v2.0.1 以前は Release を作っていない。
-      # workflow_dispatch（作り直し）でタグが無いときは target_commitish の時点で生成される
       - name: Generate release notes
         id: notes
         env:
@@ -168,14 +166,14 @@ jobs:
             echo "NOTES_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # 作り直し（workflow_dispatch）では Release は作らない（タグが無い・既にある）
+      # タグ名は v$VERSION から作る（Tag a release から呼ばれたときは ref が main で、$GITHUB_REF_NAME は使えない）
       - name: Create release
-        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
 
   create-k8s-pr:
     # 検査が全部（ビルド・checks・E2E）通ったときだけ k8s マニフェストへ PR する（release が同じ条件で
