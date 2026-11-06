@@ -51,7 +51,11 @@ jobs:
             minor) version="$major.$((minor + 1)).0" ;;
             patch) version="$major.$minor.$((patch + 1))" ;;
           esac
-          git tag "v$version"
+          # 注釈付きにする。打った時刻を持つので、アプリ内のリリースノートの時刻になる
+          # （軽量タグはコミットの時刻＝ main にマージした時刻しか持たない）
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898133+github-actions[bot]@users.noreply.github.com'
+          git tag -a "v$version" -m "v$version"
           git push origin "v$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Tagged \`v$version\` on $GITHUB_SHA (previous: \`$prev\`, bump: $BUMP)" >> "$GITHUB_STEP_SUMMARY"
@@ -61,9 +65,10 @@ jobs:
     uses: ./.github/workflows/docker-build.yml
     with:
       version: ${{ needs.tag.outputs.version }}
-    # 呼ばれる側のジョブが使う権限の和（GitHub Release の作成・イメージの push。E2E の packages: read も含む）と、
-    # デプロイの PR に使うシークレット。足りないと呼ばれる側が起動時に落ちる
+    # 呼ばれる側のジョブが使う権限の和（GitHub Release の作成・イメージの push・リリースノートのための PR の読み取り。
+    # E2E の packages: read も含む）と、デプロイの PR に使うシークレット。足りないと呼ばれる側が起動時に落ちる
     permissions:
       contents: write
       packages: write
+      pull-requests: read
     secrets: inherit

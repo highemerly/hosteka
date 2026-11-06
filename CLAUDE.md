@@ -12,6 +12,13 @@ Mastodon・Misskey・Pleroma はサーバーごとにその場でアプリを登
 - **main へ直接コミットしない。** 作業を始めるときにブランチを切り、PR で取り込む
   （ruleset が main への push を拒否する。手順と理由は `docs/development.md`）
 
+## リリースノート（必ず守ること）
+
+アプリ内のリリースノート（`/release-notes`）は、タグのビルドが **PR 本文の `release-note` ブロック**から作る。
+PR を作るときに、利用者から見て変わることがあれば日本語で書く（種別は `add` / `change` / `remove` / `fix`）。
+書かなければ「その他軽微な修正」にまとまる（`ci` / `docs` / `test` は数えない）。書き方と仕組みは
+`docs/development.md`「アプリ内のリリースノート」。**題名と本文の残りは英語のまま**（GitHub Release は英語）。
+
 ## 公開リポジトリ（必ず守ること）
 
 - **インフラの非公開の情報**（マニフェストのリポジトリ名・パス、namespace、クラスタの内部の名前や IP）を
