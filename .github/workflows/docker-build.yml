@@ -45,6 +45,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # アプリ内のリリースノートのため、PR の本文を読む
+      pull-requests: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       # E2E が pull するイメージ（metadata-action の {{version}} と同じ値）
@@ -78,6 +80,28 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "version=${INPUT_VERSION:-${GITHUB_REF#refs/tags/v}}" >> "$GITHUB_OUTPUT"
+
+      # アプリ内のリリースノートの時刻は、タグを打った時刻（Tag a release が打つ注釈付きのタグが持つ）。
+      # タグの push で起動したとき、checkout は起動したタグを取り直す（注釈を落とすことがある）ので、origin のとおりに取り直す
+      - name: Fetch tags as pushed
+        run: git fetch --force --tags
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # アプリ内のリリースノート（/release-notes）。PR 本文の release-note ブロックから作り、
+      # docker build の前に置いてイメージに焼き込む（Release がある版は「デプロイしてよい版」で、
+      # デプロイ済みではない。実行時に GitHub から読むと、まだ出ていない変更が載る）。
+      # 素の node で動くので npm ci は要らない。版ごとの中身と「その他軽微な修正」に数えた PR はサマリーに出る
+      - name: Generate the in-app release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: >-
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/release-notes.ts
+          "$VERSION" src/screens/content/release-notes-generated.json
 
       - name: Find previous tag and migration changes
         id: prev

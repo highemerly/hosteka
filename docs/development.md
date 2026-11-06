@@ -183,7 +183,8 @@ docker compose -f e2e/compose.yml down -v
    ```
    - **版はタグだけに持つ**（package.json に `version` を書かない。アプリは版を読んでいない）。bump の PR は要らない
    - 前回のタグからコミットが無ければ止まる。main 以外から実行しても止まる
-   - 手元でタグを打って push しても同じことが起きる（`git tag vX.Y.Z && git push origin vX.Y.Z`。タグは ruleset の対象外）
+   - 手元でタグを打って push しても同じことが起きる（`git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`。
+     タグは ruleset の対象外）。注釈付きにするのは、打った時刻がアプリ内のリリースノートの時刻になるため
 
    | 上げ方 | いつ |
    |---|---|
@@ -194,7 +195,8 @@ docker compose -f e2e/compose.yml down -v
 2. [docker-build.yml](../.github/workflows/docker-build.yml) が動く:
    1. **検査を全部回す**（ブランチで差分により省いたものも）。checks はビルドと並走し、
       E2E は **push したイメージそのもの**で回す（作り直したイメージで通っても、デプロイするものの確認にならない）
-   2. イメージを `X.Y.Z`・`X.Y`・`latest` で GHCR へ push する。ビルドのときに公開URL（`PUBLIC_URL`）を
+   2. アプリ内のリリースノートを PR 本文から作り（下の「アプリ内のリリースノート」）、
+      イメージを `X.Y.Z`・`X.Y`・`latest` で GHCR へ push する。ビルドのときに公開URL（`PUBLIC_URL`）を
       `NEXTAUTH_URL` として渡す（静的なページにリンクカードの画像の絶対URLを焼き込むため）。**イメージは検査の結果を待たずに push され、
       `latest` も動く。本番は版を固定していて、`latest` はデプロイに使わない**
    3. 全部が緑のときだけ **GitHub Release** を作る（タグごと・パッチも含む）。Release がある版＝デプロイしてよい版
@@ -222,6 +224,33 @@ GitHub の自動生成（前回のタグからマージされた PR の一覧と
 - **前回のタグを明示している**（`previous_tag_name`）。省くと GitHub は前回の「Release」を起点にするが、
   v2.0.1 以前は Release を作っていない
 - `.github/release.yml` は、ノートを作る対象のコミット（タグの位置）から読まれる
+
+### アプリ内のリリースノート
+
+`/release-notes` は日本語・利用者向け。GitHub Release（英語・PR の題名の一覧）とは読み手が違うので、
+文面は使い回さず、**同じ PR の集まりから本文の `release-note` ブロックを取る**。
+
+````md
+```release-note
+add: 日程調整： SNS に URL を貼ったときのリンクカードに画像を表示
+fix: イベント： 参加者一覧から主催者や作成者をキャンセルできてしまう問題を修正
+```
+````
+
+- 種別は `add`（追加）・`change`（変更）・`remove`（削除）・`fix`（修正）。1行が1項目。書き方は今までのノートに揃える
+- **ブロックの無い PR は「その他軽微な修正」の1行にまとまる**（`ci`・`docs`・`test` の PR は数えない）。
+  利用者に見えない変更は書かなくてよい。**空のブロック**は「載せるものも、軽微な修正もない」の明示
+- 同じ文は版の中で1行にまとまる（セキュリティの修正が何件あっても「セキュリティ改善」は1行）
+- 載せるものが1つも無い版は出さない
+- **組み立てはタグのビルド**（docker-build.yml が [scripts/release-notes.ts](../scripts/release-notes.ts) を呼び、
+  `src/screens/content/release-notes-generated.json` を上書きしてからイメージを作る）。
+  リポジトリのその JSON は空の配列のままにしておく。版ごとに何が載ったかはジョブのサマリーに出る
+- **毎回全部の版を作り直す。** 文言を直したければ PR 本文を直す（次のリリースで反映される）
+- 時刻は Tag a release の注釈付きのタグを打った時刻。本番に出た時刻（マニフェストの PR のマージ）ではない
+- **イメージに焼き込み、実行時に GitHub から読まない。** Release がある版は「デプロイしてよい版」で、
+  デプロイ済みとは限らない。実行時に読むと、まだ出ていない版の変更が載る
+- 2.0.5 までは [release-notes-legacy.ts](../src/screens/content/release-notes-legacy.ts) に手で書いてある
+  （スクリプトはそれより新しいタグだけを作る）
 
 ### マイグレーション
 
