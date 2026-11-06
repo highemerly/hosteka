@@ -54,7 +54,12 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 依存は Renovate（GitHub App）が出す PR で上げる。設定は [.github/renovate.json5](../.github/renovate.json5)（各ルールの理由はコメント）。
 
-- **毎週月曜・木曜の 9時前（JST）** にまとめて PR が来る（lockfile の一括更新は月曜のみ）。自動マージはしない
+- **毎週月曜・木曜の 9時前（JST）** にまとめて PR が来る（lockfile の一括更新は月曜のみ）
+- **マイナー・パッチは CI（`ci-result`）が緑なら自動でマージされる。** 除くのは、下の表で「手元で」「変更履歴を読む」と
+  したもの（next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・prisma 一式・cookies-next・0.x）と、
+  タグ時にしか動かないワークフロー（docker-build.yml・tag-release.yml）。PR に1つでも除外の更新が入っていれば手でマージする。
+  自動でマージされる PR は assign されない（「Assigned to you」に残るのは手で見るものだけ）
+- メジャー・`node:24-alpine` の digest・lockfile の一括更新は手でマージする
 - **メジャーは承認制。** PR は自動では来ず、Issue「Dependency Dashboard」の Pending Approval に並ぶ
   （見送っている理由: eslint 10 は eslint-config-next が使う eslint-plugin-react が未対応、TypeScript 7 は
   typescript-eslint と next typegen の追従待ち）
@@ -66,6 +71,8 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 ### PR が来たら
 
+自動でマージされなかったもの（assign されて残っているもの）を見る。
+
 1. CI（`ci-result`）が緑か見る。赤なら ruleset でマージできない。依存の更新では checks と e2e が両方走る
 2. lockfile の差分を見て、実際に入る版が変わるかを確かめる。PR 本文の変更履歴（Renovate が載せる）を読む
 3. 種類に応じて確認を足す。**CI が見ているのは unit・lint・型と、E2E（本番イメージで主要なページが開けるか、
@@ -73,15 +80,16 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
    | 種類 | 例 | マージ前の確認 |
    |---|---|---|
-   | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom・@playwright/test | CI 緑ならマージ |
-   | テストが本物を通るもの | jose（JWT）・ics（カレンダー）・zod・react-markdown / rehype-* | CI 緑ならマージ |
+   | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom・@playwright/test | CI 緑ならマージ（マイナー・パッチは自動） |
+   | テストが本物を通るもの | jose（JWT）・ics（カレンダー）・zod・react-markdown / rehype-* | CI 緑ならマージ（マイナー・パッチは自動） |
    | ビルドと表示 | next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・`node:24-alpine` の digest | E2E 緑で本番ビルド・起動・主要ページまでは確認済み。見た目と操作は手元で |
    | DB | prisma 一式 | ユニットテストはモック。E2E が空の DB に SQL を当てて API が応答するところまで。書き込みは手元で |
    | 0.x のもの | class-variance-authority・@tailwindcss/typography・server-only | 0.x はマイナーでも互換を崩すことが多いのに Renovate はメジャー扱いしない。変更履歴を読む |
    | ログイン・投稿に関わるもの | cookies-next | E2E 緑で Mastodon / Misskey のログインと投稿までは確認済み。Discord・X は手元で |
    | タグ時にしか動かない Actions | docker/login-action・docker/metadata-action・peter-evans/create-pull-request | PR の CI では動かない。次のリリースの docker-build.yml で初めて動く |
 4. squash マージする
-5. 手元で入れ直す（`npm ci` は生成済みの Prisma クライアントごと node_modules を消すので generate も要る）:
+5. 手元で入れ直す（自動でマージされたものも含め、作業を始める前に。`npm ci` は生成済みの Prisma クライアントごと
+   node_modules を消すので generate も要る）:
    ```bash
    git switch main && git pull
    npm ci
@@ -98,7 +106,9 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 ### その他
 
 - 今は要らない更新: PR を閉じる（その版は作り直されない。次の版が出れば再び PR になる）。恒久的に止めるなら renovate.json5 にルールを足す
-- 急ぐ更新（セキュリティ修正など）: Dashboard の Awaiting Schedule でチェックを入れると、スケジュールを待たずに PR が作られる
+- セキュリティ修正: Dependabot alerts（リポジトリの設定で有効。Dependabot 自身の PR は無効のまま）に載ったものは、
+  Renovate がスケジュールと公開からの3日待ちを待たずに PR を作る
+- その他の急ぐ更新: Dashboard の Awaiting Schedule でチェックを入れると、スケジュールを待たずに PR が作られる
 - 手元で `npm update` はしない（Renovate の PR とぶつかる）。依存の追加はブランチを切って PR で
 
 ## コマンド
