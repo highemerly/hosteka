@@ -175,9 +175,53 @@ describe('buildPreviewEvent の中身', () => {
     expect(e.optionGroups[0].options[0].takenCount).toBe(0)
   })
 
-  it('サーバー限定は種別不明として渡す（保存時に外部APIで引かれる）', () => {
+  it('サーバー限定は、手元で分からない種別を不明として渡す（保存時に外部APIで引かれる）', () => {
     const e = preview({ allowedFediverseServers: ['handon.club'] })
     expect(e.allowedServers).toEqual([{ server: 'handon.club', platform: null }])
+  })
+
+  it('ログイン中の人のサーバーは、その人のプラットフォームを種別にする', () => {
+    const viewer = {
+      id: 'u1', name: 'Me', avatar: null, isAdmin: false,
+      username: 'me', server: 'Misskey.io', platform: 'misskey', v: 1 as const,
+    }
+    const e = buildPreviewEvent({
+      values: parse({ allowedFediverseServers: ['misskey.io', 'handon.club'] }),
+      viewer,
+      organization: null,
+      now: NOW,
+    })
+    expect(e.allowedServers).toEqual([
+      { server: 'misskey.io', platform: 'misskey' },
+      { server: 'handon.club', platform: null },
+    ])
+
+    // Discord・X でログインしている人のサーバーからは、Fediverse の種別は分からない
+    const discord = buildPreviewEvent({
+      values: parse({ allowedFediverseServers: ['discord.com'] }),
+      viewer: { ...viewer, server: 'discord.com', platform: 'discord' },
+      organization: null,
+      now: NOW,
+    })
+    expect(discord.allowedServers).toEqual([{ server: 'discord.com', platform: null }])
+  })
+
+  it('編集中は、保存済みのサーバーの種別を引き継ぐ', () => {
+    const existing = {
+      ...preview({}),
+      allowedServers: [{ server: 'handon.club', platform: 'mastodon' as const }],
+    }
+    const e = buildPreviewEvent({
+      values: parse({ allowedFediverseServers: ['handon.club', 'example.social'] }),
+      viewer: null,
+      organization: null,
+      existing,
+      now: NOW,
+    })
+    expect(e.allowedServers).toEqual([
+      { server: 'handon.club', platform: 'mastodon' },
+      { server: 'example.social', platform: null },
+    ])
   })
 
   it('実在しないIDだと分かる値を使う', () => {

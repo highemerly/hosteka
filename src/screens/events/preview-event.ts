@@ -1,3 +1,4 @@
+import { FEDIVERSE_PLATFORM_ORDER, type FediversePlatform } from '@/lib/allowed-servers'
 import type { Viewer } from '@/lib/viewer'
 import type { EventFormOutput } from '@/schemas/event'
 import type { EventDetailDto } from '@/server/serializers/event'
@@ -38,6 +39,24 @@ function hasTime(time: string | undefined): boolean {
 /** `YYYY-MM-DD` と `HH:MM` を JST の瞬間にする */
 function jstInstant(day: string, time: string): string {
   return new Date(`${day}T${time}:00+09:00`).toISOString()
+}
+
+/**
+ * サーバーの種別のうち、外へ問い合わせずに分かるもの。
+ * 編集中のイベントに保存済みの種別と、ログイン中の人のサーバー（自分のサーバーに限定する、が最も多い）。
+ */
+function knownPlatform(
+  server: string,
+  existing: EventDetailDto | null | undefined,
+  viewer: Viewer | null
+): FediversePlatform | null {
+  const host = server.toLowerCase()
+  const saved = existing?.allowedServers.find((s) => s.server.toLowerCase() === host)?.platform
+  if (saved) return saved
+  if (viewer && viewer.server.toLowerCase() === host) {
+    return FEDIVERSE_PLATFORM_ORDER.find((p) => p === viewer.platform) ?? null
+  }
+  return null
 }
 
 export type PreviewInput = {
@@ -112,11 +131,12 @@ export function buildPreviewEvent({
       （`enrichServersWithPlatform`）。**プレビューでは引かない。**
       外部へ問い合わせるとプレビューを開くのが遅くなるうえ、
       失敗したときに何を出すかという分岐が増える。
-      種別不明として扱うので、バッジは「Fediverse 一般」の姿になる。
+      手元で分かるもの（`knownPlatform`）だけ使い、ほかは種別不明として
+      扱う（バッジは「Fediverse 一般」の姿になる）。
     */
     allowedServers: values.allowedFediverseServers.map((server) => ({
       server,
-      platform: null,
+      platform: knownPlatform(server, existing, viewer),
     })),
     isAllowedForFediverse: values.isAllowedForFediverse,
     isAllowedForDiscord: values.isAllowedForDiscord,
