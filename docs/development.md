@@ -54,7 +54,8 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 依存は Renovate（GitHub App）が出す PR で上げる。設定は [.github/renovate.json5](../.github/renovate.json5)（各ルールの理由はコメント）。
 
-- **毎週月曜・木曜の 9時前（JST）** にまとめて PR が来る（lockfile の一括更新は月曜のみ）
+- **毎週月曜・木曜の 9時前（JST）** にまとめて PR が来る（lockfile の一括更新は月曜のみ）。1時間あたりの件数の上限は
+  外してある（既定の2件だと、枠の中で App が動く数回では捌けず、更新が何週も持ち越される）。同時に開く PR は10件まで
 - **マイナー・パッチは CI（`ci-result`）が緑なら自動でマージされる。** 除くのは、下の表で「手元で」「変更履歴を読む」と
   したもの（next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・prisma 一式・cookies-next・0.x）と、
   タグ時にしか動かないワークフロー（docker-build.yml・tag-release.yml）。PR に1つでも除外の更新が入っていれば手でマージする。

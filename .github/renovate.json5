@@ -6,6 +6,10 @@
   timezone: 'Asia/Tokyo',
   // 週2回にまとめる（毎日 PR が来ると確認が追いつかず、週1だと間隔が空きすぎる）。
   schedule: ['before 9am on monday and thursday'],
+  // 既定の「1時間に2件まで」を外す。App が枠の中で動くのは数回だけなので、既定のままだと
+  // 週に8件ほどしか PR が作られず、更新が何週も持ち越される（next のマイナーがこれで止まっていた）。
+  // 同時に開いておける数の上限（prConcurrentLimit、既定10）は残す。
+  prHourlyLimit: 0,
   labels: ['dependencies'],
   // PR を github.com/pulls の「Assigned to you」にまとめる（いくつものリポジトリから来るので見落とさない）
   assignees: ['highemerly'],
