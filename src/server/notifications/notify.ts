@@ -357,6 +357,28 @@ export async function notifyPreEventDeleted(preEvent: TargetRef, actorId: string
   })
 }
 
+/**
+ * 日程調整がイベントになった → 回答した人へ。**宛先はイベントで、名前もイベントのもの。**
+ *
+ * 自動で参加登録された人とそれ以外で文が違う（`payload.registered`）。
+ * 回答した人には○を付けなかった人も含む — 参加しない人にも、決まったことは届ける。
+ */
+export async function notifyPreEventPromoted(
+  preEvent: { id: string },
+  event: TargetRef,
+  registeredIds: string[],
+  actorId: string
+) {
+  const registered = new Set(registeredIds)
+  const others = (await listPreEventRespondentIds(preEvent.id)).filter((id) => !registered.has(id))
+  const base = { kind: 'pre_event_promoted', targetType: 'event', targetId: event.id, actorId } as const
+  const [a, b] = await Promise.all([
+    deliver({ ...base, payload: { title: event.title, registered: true }, recipientIds: registeredIds }),
+    deliver({ ...base, payload: { title: event.title }, recipientIds: others }),
+  ])
+  return { created: a.created + b.created, folded: a.folded + b.folded }
+}
+
 /** グループの管理者に追加された → 本人へ */
 export async function notifyOrgAdminAdded(
   org: { id: string; name: string; slug: string },

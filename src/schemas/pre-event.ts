@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { VALIDATION_LIMITS } from './limits'
 import { allowedFediverseServersSchema } from './allowed-servers'
+import { eventFormSchema } from './event'
 
 /**
  * 自分の日程調整一覧（`/dashboard/my-pre-events`）のクエリ。
@@ -58,6 +59,20 @@ export const respondPreEventBody = z.object({
    */
   termsAccepted: z.boolean().optional(),
 })
+
+/**
+ * 日程調整をイベントにする本文。
+ *
+ * `event` は作成画面と同じ形（`eventFormSchema`）。日時・規約・参加できる人・
+ * 主催の名義は日程調整（と選んだ候補日）と同じでなければならないが、
+ * **それを見るのはルート**（DB を引く必要がある。`lib/pre-event-promotion.ts`）。
+ */
+export const promotePreEventBody = z.object({
+  dateOptionId: z.string().trim().min(1, '候補日を選んでください'),
+  event: eventFormSchema,
+})
+
+export type PromotePreEventBody = z.input<typeof promotePreEventBody>
 
 // =============================================================================
 // 作成・編集フォーム

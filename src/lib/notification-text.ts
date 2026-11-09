@@ -29,6 +29,8 @@ export type NotificationPayload = {
   reason?: 'closed'
   /** グループの slug。導線を組むのに使う */
   orgSlug?: string
+  /** 日程調整がイベントになったとき、受け取る人が自動で参加登録されたか */
+  registered?: boolean
 }
 
 /**
@@ -130,6 +132,15 @@ const TEMPLATES: Record<NotificationKind, (n: NotificationTextInput) => string> 
   pre_event_updated: (n) =>
     `${target(n.payload, '日程調整')}の${changedLabels(n.payload)}が変わりました`,
   pre_event_deleted: (n) => `${target(n.payload, '日程調整')}が取り消されました`,
+  /*
+    日程調整がイベントになった。名前はイベントのもの（押すとイベントへ行く）。
+    **自動で登録された人には、登録されたことまで言う。** 言わないと、
+    自分で登録しに行って「登録済み」を見ることになる。
+  */
+  pre_event_promoted: (n) =>
+    n.payload.registered
+      ? `${target(n.payload, 'イベント')}の日程が決まり、参加で登録されました`
+      : `${target(n.payload, 'イベント')}の日程が決まりました`,
 
   organizer_assigned: (n) => `${target(n.payload, 'イベント')}の幹事になりました`,
   organizer_unassigned: (n) => `${target(n.payload, 'イベント')}の幹事ではなくなりました`,
@@ -153,6 +164,7 @@ export const KIND_LABEL_JA: Record<NotificationKind, string> = {
   event_cancelled: '中止',
   pre_event_updated: '日程調整の変更',
   pre_event_deleted: '取り消し',
+  pre_event_promoted: '日程の決定',
   organizer_assigned: '幹事',
   organizer_unassigned: '幹事',
   org_admin_added: 'グループ',

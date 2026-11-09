@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { extractServerNamesFromAllowedServers } from '@/lib/participation-utils'
 import { answerSignature } from '@/server/pre-events/answer-signature'
 import { notifyAfter, notifyPreEventAnswered } from '@/server/notifications/notify'
+import { assertNotPromoted } from '@/server/pre-events/promotion'
 
 // 日程調整の回答入力型
 interface DateOptionResponse {
@@ -84,6 +85,7 @@ export const POST = defineRoute({
     }
     await hideDisabledFromNonAdmins(preEvent.isDisabled, session, '日程調整が見つかりません')
     assertAnswersOpen(preEvent)
+    assertNotPromoted(preEvent)
 
     // プラットフォーム許可チェック
     const userPlatform = session.user.platform
@@ -252,6 +254,7 @@ export const DELETE = defineRoute({
     }
     await hideDisabledFromNonAdmins(preEvent.isDisabled, session, '日程調整が見つかりません')
     assertAnswersOpen(preEvent)
+    assertNotPromoted(preEvent)
 
     // 既存の回答を削除
     await prisma.preEventParticipant.deleteMany({

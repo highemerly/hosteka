@@ -45,6 +45,7 @@ export const KIND_FOLD: Record<NotificationKind, FoldStrategy> = {
   participation_removed: 'none',
   event_cancelled: 'none',
   pre_event_deleted: 'none',
+  pre_event_promoted: 'none',
   organizer_assigned: 'none',
   organizer_unassigned: 'none',
   org_admin_added: 'none',

@@ -45,9 +45,11 @@ export const GET = defineRoute({
 
       「終わっていない」は**未来の候補日が1つでも残っていること**。
       日程調整には開催日が無いので、候補日の有無で判定する。
+      **イベントにしたものも出さない**（もう回答できない。行き先はイベントの一覧）。
     */
     const base: Prisma.PreEventWhereInput[] = [
       ...PUBLIC_PRE_EVENT_CONDITIONS,
+      { promotedAt: null },
       { dateOptions: { some: { startDate: { gte: now } } } },
     ]
 

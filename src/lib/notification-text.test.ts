@@ -49,6 +49,19 @@ describe('通知の文言', () => {
     )
   })
 
+  /**
+   * 日程調整がイベントになった。自動で登録された人には、登録されたことまで言う
+   * （言わないと、自分で登録しに行って「登録済み」を見ることになる）
+   */
+  it('日程が決まった知らせは、自動で登録されたかで文が変わる', () => {
+    expect(
+      notificationText(input({ kind: 'pre_event_promoted', payload: { title: '忘年会', registered: true } }))
+    ).toBe('『忘年会』の日程が決まり、参加で登録されました')
+    expect(notificationText(input({ kind: 'pre_event_promoted', payload: { title: '忘年会' } }))).toBe(
+      '『忘年会』の日程が決まりました'
+    )
+  })
+
   it('退会した人の操作でも壊れない', () => {
     expect(notificationText(input({ kind: 'participation_requested', actor: null }))).toBe(
       '退会した利用者が『花見の会』に参加リクエストを出しました'

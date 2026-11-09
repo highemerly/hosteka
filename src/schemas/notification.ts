@@ -24,6 +24,7 @@ export const NOTIFICATION_KINDS = [
   'event_cancelled',
   'pre_event_updated',
   'pre_event_deleted',
+  'pre_event_promoted',
   // 役割が変わったとき
   'organizer_assigned',
   'organizer_unassigned',
@@ -68,6 +69,7 @@ export const KIND_CATEGORY: Record<NotificationKind, NotificationCategory> = {
   event_cancelled: 'participant',
   pre_event_updated: 'participant',
   pre_event_deleted: 'participant',
+  pre_event_promoted: 'participant',
 
   organizer_assigned: 'role',
   organizer_unassigned: 'role',

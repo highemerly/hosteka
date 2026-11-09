@@ -48,10 +48,13 @@ export const GET = defineRoute({
       **終わったかどうかは候補日で決める。** 日程調整に開催日は無い。
       未来の候補日が1つでも残っていればこれから、1つも無ければ終了
       （`/api/v1/pre-events/sections` と同じ判定）。
+      **イベントにしたものは終わった側。** 日程調整としての役目は済んでいる。
     */
-    const scoped: Prisma.PreEventWhereInput = past
-      ? { NOT: { dateOptions: { some: { startDate: { gte: now } } } } }
-      : { dateOptions: { some: { startDate: { gte: now } } } }
+    const upcoming: Prisma.PreEventWhereInput = {
+      promotedAt: null,
+      dateOptions: { some: { startDate: { gte: now } } },
+    }
+    const scoped: Prisma.PreEventWhereInput = past ? { NOT: upcoming } : upcoming
 
     const where: Prisma.PreEventWhereInput = {
       // 管理者が無効にしたものは自分のものでも出さない

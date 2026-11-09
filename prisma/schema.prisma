@@ -193,6 +193,8 @@ model Event {
   options        EventOption[]
   reports        Report[]
   attendances    EventAttendance[]
+  /// このイベントの元になった日程調整
+  promotedFrom   PreEvent?          @relation("PreEventPromotion")
 
   @@index([isPublic, isDisabled, startDate])
   @@index([creatorId])
@@ -309,17 +311,26 @@ model PreEvent {
   isHighlighted           Boolean   @default(false)
   isDisabled              Boolean   @default(false)
   registrationDeadline    DateTime? @db.Timestamptz(3)
+  /// イベントにした時刻。**null でなければ閉じている**（回答も編集もできない）。
+  /// 閉じているかはこの列で見る。`promotedEventId` ではない — あちらはイベントが
+  /// 消えると null に戻るが、日程調整は再開しない
+  promotedAt              DateTime? @db.Timestamptz(3)
+  /// どの候補日でイベントにしたか。閉じたあとは候補日を編集できないので、外部キーにしない
+  promotedDateOptionId    String?
   createdAt               DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
 
   // Relations
-  creator        User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId      String
-  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  organizationId String?
-  dateOptions    PreEventDateOption[]
-  participants   PreEventParticipant[]
-  reports        Report[]
+  creator         User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId       String
+  organization    Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  /// この日程調整から作ったイベント。1つの日程調整からは1つだけ
+  promotedEvent   Event?                @relation("PreEventPromotion", fields: [promotedEventId], references: [id], onDelete: SetNull)
+  promotedEventId String?               @unique
+  dateOptions     PreEventDateOption[]
+  participants    PreEventParticipant[]
+  reports         Report[]
 
   @@index([isPublic, isDisabled, createdAt])
   @@index([creatorId])
@@ -490,6 +501,7 @@ model Notification {
   /// "participation_requested" | "participation_registered" | "participation_cancelled"
   /// | "participation_approved" | "participation_rejected" | "pre_event_answered"
   /// | "event_updated" | "event_cancelled" | "pre_event_updated" | "pre_event_deleted"
+  /// | "pre_event_promoted"
   /// | "organizer_assigned" | "organizer_unassigned" | "org_admin_added"
   kind        String
   /// "event" | "pre_event" | "org"

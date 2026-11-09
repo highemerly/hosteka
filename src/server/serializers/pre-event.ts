@@ -3,6 +3,8 @@ import 'server-only'
 import { serializeUser, type PublicUserDto } from './user'
 import { parseAllowedServers, type AllowedServer } from '@/lib/allowed-servers'
 import { canChangeOrganization } from '@/lib/status-transition'
+import { extractServerNamesFromAllowedServers } from '@/lib/participation-utils'
+import { selectAutoRegistrants } from '@/lib/pre-event-promotion'
 
 /**
  * 日程調整のDTO。
@@ -27,6 +29,11 @@ export type PreEventDateOptionDto = {
   counts: { available: number; maybe: number; unavailable: number }
   /** ○と△の人だけ。×は名前を出さない（出席できない人の一覧に意味がない） */
   attendees: { user: PublicUserDto; vote: Exclude<PreEventVote, 'unavailable'> }[]
+  /**
+   * この日でイベントにしたら、自動で参加登録される人数。
+   * **サーバーの登録と同じ関数で数える**（`selectAutoRegistrants`）。定員の下限になる
+   */
+  autoRegisterCount: number
 }
 
 /**
@@ -97,6 +104,11 @@ export type PreEventDetailDto = {
   respondents: PreEventRespondentDto[]
   /** 回答した人の数（延べではなく実人数） */
   respondentCount: number
+  /**
+   * イベントにしたか。null なら受付中。**イベントにした日程調整は閉じている**
+   * （回答も編集もできない）。`eventId` はイベントが消えると null になる
+   */
+  promotion: { eventId: string | null; dateOptionId: string | null; promotedAt: string } | null
   viewer: PreEventViewerDto
   createdAt: string
   updatedAt: string
@@ -130,6 +142,9 @@ type PreEventRow = {
   isAllowedForFediverse: boolean
   isAllowedForDiscord: boolean
   isAllowedForTwitter: boolean
+  promotedAt: Date | null
+  promotedEventId: string | null
+  promotedDateOptionId: string | null
   createdAt: Date
   updatedAt: Date
   creator: Parameters<typeof serializeUser>[0]
@@ -168,6 +183,17 @@ export function serializePreEventDetail(
     else byDateOption.set(row.dateOptionId, [row])
   }
 
+  const promotionSource = {
+    terms: preEvent.terms,
+    organizationId: preEvent.organization?.id ?? null,
+    isAllowedForFediverse: preEvent.isAllowedForFediverse,
+    isAllowedForDiscord: preEvent.isAllowedForDiscord,
+    isAllowedForTwitter: preEvent.isAllowedForTwitter,
+    allowedServers: preEvent.allowedFediverseServers
+      ? extractServerNamesFromAllowedServers(JSON.parse(preEvent.allowedFediverseServers))
+      : [],
+  }
+
   const dateOptions: PreEventDateOptionDto[] = preEvent.dateOptions.map((option) => {
     const rows = byDateOption.get(option.id) ?? []
     const counts = { available: 0, maybe: 0, unavailable: 0 }
@@ -188,6 +214,11 @@ export function serializePreEventDetail(
       displayOrder: option.displayOrder,
       counts,
       attendees,
+      autoRegisterCount: selectAutoRegistrants(rows, {
+        dateOptionId: option.id,
+        creatorId: preEvent.creator.id,
+        source: promotionSource,
+      }).length,
     }
   })
 
@@ -262,6 +293,13 @@ export function serializePreEventDetail(
     dateOptions,
     respondents,
     respondentCount: respondents.length,
+    promotion: preEvent.promotedAt
+      ? {
+          eventId: preEvent.promotedEventId,
+          dateOptionId: preEvent.promotedDateOptionId,
+          promotedAt: preEvent.promotedAt.toISOString(),
+        }
+      : null,
     viewer,
     createdAt: preEvent.createdAt.toISOString(),
     updatedAt: preEvent.updatedAt.toISOString(),

@@ -68,6 +68,7 @@ const FULL: PreEventDetailDto = {
       displayOrder: 0,
       counts: { available: 0, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
     // 同じ日の時間帯（19:00–21:00 JST）
     {
@@ -77,6 +78,7 @@ const FULL: PreEventDetailDto = {
       displayOrder: 1,
       counts: { available: 1, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
     // 同じ日のもう1枠（13:00–15:00 JST）
     {
@@ -86,6 +88,7 @@ const FULL: PreEventDetailDto = {
       displayOrder: 2,
       counts: { available: 0, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
     // 日をまたぐ（22:00–翌02:00 JST）
     {
@@ -95,6 +98,7 @@ const FULL: PreEventDetailDto = {
       displayOrder: 3,
       counts: { available: 0, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
     // 複数日にわたる（12/19 10:00 〜 12/21 15:00 JST）
     {
@@ -104,6 +108,7 @@ const FULL: PreEventDetailDto = {
       displayOrder: 4,
       counts: { available: 0, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
     /*
       複数日で時刻を決めていない（12/26 〜 12/28 JST）。合宿の候補で最も多い形。
@@ -118,10 +123,12 @@ const FULL: PreEventDetailDto = {
       displayOrder: 5,
       counts: { available: 0, maybe: 0, unavailable: 0 },
       attendees: [],
+      autoRegisterCount: 0,
     },
   ],
   respondents: [],
   respondentCount: 0,
+  promotion: null,
   viewer: {
     isAuthenticated: true,
     isOrganizer: true,
@@ -244,6 +251,7 @@ const CLASSIFY: Record<keyof PreEventDetailDto, Classification> = {
   viewer: { carried: false, why: '閲覧者ごとの状態。保存されるものではない' },
   createdAt: { carried: false, why: 'サーバーが決める' },
   updatedAt: { carried: false, why: 'サーバーが決める' },
+  promotion: { carried: false, why: 'イベントにした記録。イベントにした日程調整は編集できない' },
 }
 
 describe('DTO の項目がすべて分類されている', () => {

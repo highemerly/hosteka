@@ -21,6 +21,7 @@ import {
 } from '@/server/queries/pre-event-detail'
 import { serializePreEventDetail } from '@/server/serializers/pre-event'
 import { notifiablePreEventChanges } from '@/server/pre-events/pre-event-change'
+import { assertNotPromoted } from '@/server/pre-events/promotion'
 import {
   notifyAfter,
   notifyPreEventDeleted,
@@ -103,6 +104,7 @@ export const PUT = defineRoute({
         allowAutoRegistration: true,
         isPublic: true,
         isHighlighted: true,
+        promotedAt: true,
       }
     })
 
@@ -123,6 +125,7 @@ export const PUT = defineRoute({
     if (!preEvent) {
       throw ApiError.notFound('日程調整が見つかりません')
     }
+    assertNotPromoted(preEvent)
 
     const {
       title,
@@ -442,7 +445,7 @@ export const DELETE = defineRoute({
     const preEvent = await prisma.preEvent.findUnique({
       where: { id },
       // title は通知の写しに使う
-      select: { id: true, title: true }
+      select: { id: true, title: true, promotedAt: true }
     })
 
     if (!preEvent) {
@@ -456,17 +459,22 @@ export const DELETE = defineRoute({
 
       `after()` ではなくここで待つ理由も同じ — 応答の後ろに回すと、
       宛先を引くころには行が無い。
+
+      **イベントにしたあとの削除は知らせない。** 回答した人には「日程が決まった」が
+      もう届いていて、そこへ「取り消されました」が来るとイベントまで無くなったように読める。
     */
-    await notifyPreEventDeleted({ id, title: preEvent.title }, session.user.id).catch((error) => {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          event: 'notify.failed',
-          label: 'pre-event.delete',
-          error: error instanceof Error ? error.message : String(error),
-        })
-      )
-    })
+    if (!preEvent.promotedAt) {
+      await notifyPreEventDeleted({ id, title: preEvent.title }, session.user.id).catch((error) => {
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            event: 'notify.failed',
+            label: 'pre-event.delete',
+            error: error instanceof Error ? error.message : String(error),
+          })
+        )
+      })
+    }
 
     // 日程調整削除（Cascade削除により関連データも削除される）
     await prisma.preEvent.delete({
