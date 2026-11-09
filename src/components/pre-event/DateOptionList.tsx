@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Crown } from 'lucide-react'
+import { CalendarCheck, Crown } from 'lucide-react'
 
 import { DateBadge } from '@/components/event/DateBadge'
 import { UserAvatar } from '@/components/event/EventInfoRow'
@@ -36,10 +36,21 @@ function CountCell({ mark, count, muted }: { mark: string; count: number; muted?
  * 最も集まっている日に王冠を付ける。**自動では決めない** — 主催者が
  * 決めるための目安なので、同点のときは全部に付けず、
  * 「同じ数で並んでいる」と書く。
+ *
+ * **イベントにしたあとは、決まった日だけに印を付ける。** 王冠は「決めるための
+ * 目安」なので、決まったあとに残すと、決まった日と食い違ったときに迷わせる。
  */
-export function DateOptionList({ options }: { options: PreEventDateOptionDto[] }) {
+export function DateOptionList({
+  options,
+  chosenId = null,
+}: {
+  options: PreEventDateOptionDto[]
+  /** イベントにした候補日。まだなら null */
+  chosenId?: string | null
+}) {
+  const decided = chosenId !== null
   const best = bestOptionId(options)
-  const tied = hasTiedBest(options)
+  const tied = !decided && hasTiedBest(options)
 
   if (options.length === 0) {
     return (
@@ -53,7 +64,8 @@ export function DateOptionList({ options }: { options: PreEventDateOptionDto[] }
     <div className="space-y-2">
       <ul className="space-y-2">
         {options.map((option) => {
-          const isBest = !tied && option.id === best
+          const isBest = !decided && !tied && option.id === best
+          const isChosen = option.id === chosenId
           const range = formatOptionRange(option.startDate, option.endDate)
           return (
             <li
@@ -80,6 +92,12 @@ export function DateOptionList({ options }: { options: PreEventDateOptionDto[] }
                       <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-bold text-foreground">
                         <Crown className="size-3.5" aria-hidden />
                         いちばん集まっています
+                      </span>
+                    ) : null}
+                    {isChosen ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-subtle)] px-1.5 py-0.5 text-xs font-bold text-foreground">
+                        <CalendarCheck className="size-3.5" aria-hidden />
+                        この日に決まりました
                       </span>
                     ) : null}
                   </div>

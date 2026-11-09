@@ -77,6 +77,9 @@ export function PreEventDetailView({
 
   /** 幹事から見ているか。編集の入口の出し分けに使う */
   const isHost = state.kind === 'host'
+  /** イベントにしたか。したら編集できない（サーバーが断る） */
+  const promoted = preEvent.promotion !== null
+  const canPromote = preEvent.viewer.canDelete && !promoted
 
   const contactUrl = buildAnypostContactUrl({
     url: typeof window === 'undefined' ? '' : window.location.href,
@@ -133,7 +136,7 @@ export function PreEventDetailView({
           直しに来た人がまず探すのは題名のそばなので、そこに置く。
           **狭い画面では出さない** — 題名の横幅を削る。幹事メニューから行ける。
         */}
-        {isHost ? (
+        {isHost && !promoted ? (
           <Button
             variant="default"
             size="icon-sm"
@@ -158,6 +161,8 @@ export function PreEventDetailView({
           preEventId={preEvent.id}
           state={state}
           selfState={selfState}
+          promoted={promoted}
+          canPromote={canPromote}
           onRespond={onRespond}
           onDelete={onDelete}
         />
@@ -185,7 +190,10 @@ export function PreEventDetailView({
 
       <section>
         <h2 className="mb-3 text-base font-bold text-foreground">候補日</h2>
-        <DateOptionList options={preEvent.dateOptions} />
+        <DateOptionList
+          options={preEvent.dateOptions}
+          chosenId={preEvent.promotion?.dateOptionId ?? null}
+        />
       </section>
 
       <Space />
@@ -249,6 +257,8 @@ export function PreEventDetailView({
             selfState={selfState}
             size="sm"
             widthClassName="max-w-full max-sm:grow"
+            promoted={promoted}
+            canPromote={canPromote}
             onRespond={onRespond}
             onDelete={onDelete}
           />

@@ -5,6 +5,7 @@ import { resolvePreEventActionState } from './resolvePreEventActionState'
 const base = {
   dateOptions: [{ startDate: '2026-09-20T10:00:00.000Z' }],
   registrationDeadline: '2026-09-15T14:59:00.000Z',
+  promotion: null as { eventId: string | null; dateOptionId: string | null; promotedAt: string } | null,
   viewer: {
     isAuthenticated: true,
     isOrganizer: false,
@@ -101,5 +102,31 @@ describe('resolvePreEventActionState', () => {
         viewer: viewer({ isEligible: false }),
       })
     ).toEqual({ kind: 'ended', answered: false })
+  })
+
+  it('イベントになったら、締切・終了・資格より先に promoted。行き先のイベントを持ち回る', () => {
+    const promotion = { eventId: 'evt_1', dateOptionId: 'd1', promotedAt: '2026-08-20T00:00:00.000Z' }
+    for (const over of [
+      {},
+      { registrationDeadline: '2026-08-01T00:00:00.000Z' },
+      { dateOptions: [{ startDate: '2026-08-01T10:00:00.000Z' }] },
+      { viewer: viewer({ isEligible: false, ineligibleReason: 'server' }) },
+      { viewer: viewer({ isAuthenticated: false }) },
+    ]) {
+      expect(resolvePreEventActionState({ ...base, ...over, promotion })).toEqual({
+        kind: 'promoted',
+        eventId: 'evt_1',
+      })
+    }
+  })
+
+  it('主催者は、イベントになったあとも host（幹事メニューを出す）', () => {
+    expect(
+      resolvePreEventActionState({
+        ...base,
+        promotion: { eventId: 'evt_1', dateOptionId: 'd1', promotedAt: '2026-08-20T00:00:00.000Z' },
+        viewer: viewer({ isOrganizer: true }),
+      })
+    ).toEqual({ kind: 'host', answered: false })
   })
 })

@@ -64,6 +64,7 @@ describe('ログインが要る画面', () => {
     ['/events/abc/edit'],
     ['/pre-events/abc/edit'],
     ['/pre-events/abc/contact'],
+    ['/pre-events/abc/promote'],
     ['/admin'],
     ['/admin/reports/abc'],
   ])('%s は Cookie が無ければサインインへ送る', (path) => {

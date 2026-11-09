@@ -76,6 +76,8 @@ function isProtectedPath(pathname: string): boolean {
   if (PROTECTED_PATHS.some(path => pathname.startsWith(path))) return true
   if (/^\/events\/[^\/]+\/edit$/.test(pathname)) return true
   if (/^\/pre-events\/[^\/]+\/edit$/.test(pathname)) return true
+  // 日程調整をイベントにする。作成者とグループの管理者だけが開ける
+  if (/^\/pre-events\/[^\/]+\/promote$/.test(pathname)) return true
   // 連絡は回答者と主催者だけが開ける。未ログインで開いても何も出せない
   if (/^\/pre-events\/[^\/]+\/contact$/.test(pathname)) return true
   return false

@@ -78,3 +78,53 @@ describe('幹事メニューの削除', () => {
     expect(screen.queryByRole('menuitem', { name: '日程調整を削除' })).toBeNull()
   })
 })
+
+/*
+  日程調整をイベントにする。**削除と同じ人だけ**（作成者とグループの管理責任者）。
+  イベントにしたあとは編集できない（サーバーが 409 で断る）ので、入口も出さない。
+*/
+describe('イベントにする', () => {
+  const openHostMenu = () =>
+    fireEvent.keyDown(screen.getByRole('button', { name: /幹事メニュー/ }), { key: 'Enter' })
+
+  function renderHost(props: { promoted?: boolean; canPromote?: boolean }) {
+    render(
+      <PreEventAction
+        preEventId="pre1"
+        state={{ kind: 'host', answered: false }}
+        selfState={props.promoted ? { kind: 'promoted', eventId: 'evt1' } : { kind: 'open' }}
+        {...props}
+      />
+    )
+  }
+
+  it('できる人には幹事メニューに入口を出す', () => {
+    renderHost({ canPromote: true })
+    openHostMenu()
+
+    const item = screen.getByRole('menuitem', { name: '日程を決めてイベントにする' })
+    expect(item.getAttribute('href')).toBe('/pre-events/pre1/promote')
+  })
+
+  it('できない人には出さない', () => {
+    renderHost({ canPromote: false })
+    openHostMenu()
+
+    expect(screen.queryByRole('menuitem', { name: '日程を決めてイベントにする' })).toBeNull()
+  })
+
+  it('イベントにしたあとは、編集を出さず、回答の代わりにイベントへの行き先を出す', () => {
+    renderHost({ promoted: true })
+    expect(screen.getByRole('link', { name: /イベントのページへ/ }).getAttribute('href')).toBe(
+      '/events/evt1'
+    )
+
+    openHostMenu()
+    expect(screen.queryByRole('menuitem', { name: /編集/ })).toBeNull()
+  })
+
+  it('イベントが消えていれば、押せない札にする', () => {
+    render(<PreEventAction preEventId="pre1" state={{ kind: 'promoted', eventId: null }} />)
+    expect(screen.getByRole('button', { name: 'イベントになりました' }).hasAttribute('disabled')).toBe(true)
+  })
+})
