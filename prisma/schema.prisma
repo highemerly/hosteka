@@ -348,6 +348,12 @@ model PreEventParticipant {
   status                   String // "available", "maybe", "unavailable"
   comment                  String?  @db.VarChar(300)
   autoRegisterWhenPromoted Boolean  @default(false)
+  /// 参加規約に同意した時刻。規約の無い日程調整では null。
+  /// **イベントにしたときの自動登録が、この同意をイベントの参加へ引き継ぐ**
+  /// （日程調整の規約は回答が付くと書き換えられず、イベントへそのまま写すので、
+  /// 同意した文とイベントの規約は同じもの）。この列ができる前の回答は null で、
+  /// 同意していないので自動登録しない
+  termsAcceptedAt          DateTime? @db.Timestamptz(3)
   createdAt                DateTime @default(now()) @db.Timestamptz(3)
   updatedAt                DateTime @updatedAt @db.Timestamptz(3)
 

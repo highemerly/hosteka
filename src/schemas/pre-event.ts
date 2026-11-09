@@ -52,6 +52,11 @@ export const respondPreEventBody = z.object({
     .nullish(),
   /** 日程が決まったら自動で参加登録するか。許可されていなければルートが断る */
   autoRegisterWhenPromoted: z.boolean().optional(),
+  /**
+   * 参加規約への同意。規約のある日程調整でだけ要る（判定はルート側）。
+   * 一度同意した人は、回答し直すときに送らなくてよい
+   */
+  termsAccepted: z.boolean().optional(),
 })
 
 // =============================================================================

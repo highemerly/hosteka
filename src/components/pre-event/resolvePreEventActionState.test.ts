@@ -10,7 +10,7 @@ const base = {
     isOrganizer: false,
     canDelete: false,
     canChangeOrganization: false,
-    response: null as { votes: Record<string, never>; comment: null; autoRegisterWhenPromoted: boolean } | null,
+    response: null as { votes: Record<string, never>; comment: null; autoRegisterWhenPromoted: boolean; termsAccepted: boolean } | null,
     isEligible: true,
     ineligibleReason: null as 'platform' | 'server' | null,
   },
@@ -18,7 +18,7 @@ const base = {
 }
 
 const viewer = (over: Partial<typeof base.viewer>) => ({ ...base.viewer, ...over })
-const answered = { votes: {}, comment: null, autoRegisterWhenPromoted: false }
+const answered = { votes: {}, comment: null, autoRegisterWhenPromoted: false, termsAccepted: false }
 
 describe('resolvePreEventActionState', () => {
   it('未回答・受付中は open', () => {

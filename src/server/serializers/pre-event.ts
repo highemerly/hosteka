@@ -65,6 +65,8 @@ export type PreEventViewerDto = {
     votes: Record<string, PreEventVote>
     comment: string | null
     autoRegisterWhenPromoted: boolean
+    /** 参加規約に同意済みか。同意した人は回答し直すときに同意を求められない */
+    termsAccepted: boolean
   } | null
   isEligible: boolean
   ineligibleReason: 'platform' | 'server' | null
@@ -106,6 +108,7 @@ type ParticipantRow = {
   status: string
   comment: string | null
   autoRegisterWhenPromoted: boolean
+  termsAcceptedAt: Date | null
   /** 回答した時刻。回答者を並べる順に使う */
   createdAt?: Date
   user: Parameters<typeof serializeUser>[0]
@@ -233,6 +236,7 @@ export function serializePreEventDetail(
             // どの行も同じ値なので先頭から取る
             comment: mine[0].comment,
             autoRegisterWhenPromoted: mine[0].autoRegisterWhenPromoted,
+            termsAccepted: mine.some((p) => p.termsAcceptedAt !== null),
           }
         : null,
   }

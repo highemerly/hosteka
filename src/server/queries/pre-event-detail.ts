@@ -45,6 +45,7 @@ export const PRE_EVENT_DETAIL_SELECT = {
       status: true,
       comment: true,
       autoRegisterWhenPromoted: true,
+      termsAcceptedAt: true,
       // 回答者を「先に答えた順」に並べるのに使う
       createdAt: true,
       user: { select: USER_PUBLIC_SELECT },
