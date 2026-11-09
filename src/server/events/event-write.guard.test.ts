@@ -22,7 +22,7 @@ import { EVENT_FORM_FIELDS, eventColumnsFromForm } from './event-write'
  * 足しても Prisma の型は通る）ので、走査で見るしかない。
  */
 const ROUTES = {
-  作成: 'src/app/api/v1/events/route.ts',
+  作成: 'src/server/events/create-event.ts',
   編集: 'src/app/api/v1/events/[id]/route.ts',
 } as const
 

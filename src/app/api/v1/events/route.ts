@@ -5,12 +5,10 @@ import { created, makeMeta, okList } from '@/server/http/response'
 import { listEventsQuery, eventFormSchema } from '@/schemas/event'
 import { prisma } from '@/lib/prisma'
 
-import { enrichServersWithPlatform } from '@/lib/instance-platform'
-import { checkOrgAdminPermission } from '@/lib/permissions'
 import { isPlatformAllowed } from '@/lib/participation-utils'
 import { parseDate } from '@/lib/event-date-utils'
 import { eventDeadlineAt, eventEndAt } from '@/lib/event-datetime'
-import { eventColumnsFromForm } from '@/server/events/event-write'
+import { insertEvent, prepareEvent } from '@/server/events/create-event'
 import type { Prisma } from '@/generated/prisma/client'
 import { EVENT_LIST_SELECT } from '@/server/queries/event-list'
 import {
@@ -482,83 +480,8 @@ export const POST = defineRoute({
   // ここでは JSON として読めることだけを保証する。
   body: eventFormSchema,
   handler: async ({ body, session }) => {
-    const {
-      isAllowedForFediverse,
-      isAllowedForDiscord,
-      isAllowedForTwitter,
-      allowedFediverseServers,
-      terms,
-      organizationId,
-      optionGroups,
-    } = body
-
-    // allowedFediverseServers のプラットフォーム情報を取得
-    let enrichedServers: { server: string; type: string }[] | null = null
-    if (allowedFediverseServers && allowedFediverseServers.length > 0) {
-      enrichedServers = await enrichServersWithPlatform(allowedFediverseServers)
-    }
-
-    // organizationId指定時の権限チェック
-    // 組織に紐付ける場合、ユーザーがその組織の管理者である必要がある
-    if (organizationId) {
-      const hasOrgPermission = await checkOrgAdminPermission(organizationId, session.user.id)
-      if (!hasOrgPermission) {
-        throw ApiError.forbidden(
-          '指定された組織の管理者ではないため、この組織にイベントを紐付けることができません'
-        )
-      }
-    }
-
-    // トランザクションを使用してイベントとオプションを一緒に作成
-    const event = await prisma.$transaction(async (tx) => {
-      // イベントを作成。共通の写し取りは PUT と同じ関数を通す
-      const createdEvent = await tx.event.create({
-        select: { id: true },
-        data: {
-          ...eventColumnsFromForm(body),
-          isAllowedForFediverse,
-          isAllowedForDiscord,
-          isAllowedForTwitter,
-          // 制限なしは null。編集側は [] を書く（既存の制限を消す必要があるため）
-          allowedFediverseServers: enrichedServers
-            ? JSON.stringify(enrichedServers)
-            : null,
-          terms: terms || null,
-          creatorId: session.user.id,
-          organizationId: organizationId || null,
-        },
-      })
-
-      // オプショングループを作成
-      if (optionGroups && optionGroups.length > 0) {
-        // 並び順は配列の順そのもの。画面は displayOrder を送らない
-        for (const [groupOrder, group] of optionGroups.entries()) {
-          const createdGroup = await tx.eventOptionGroup.create({
-            data: {
-              eventId: createdEvent.id,
-              title: group.title,
-              responseType: group.responseType,
-              displayOrder: groupOrder,
-            },
-          })
-
-          // グループ内のオプションを作成
-          if (group.options && group.options.length > 0) {
-            await tx.eventOption.createMany({
-              data: group.options.map((option, index) => ({
-                eventId: createdEvent.id,
-                groupId: createdGroup.id,
-                name: option.name,
-                maxParticipants: option.maxParticipants || null,
-                displayOrder: index,
-              })),
-            })
-          }
-        }
-      }
-
-      return createdEvent
-    })
+    const prepared = await prepareEvent(body, session.user.id)
+    const event = await prisma.$transaction((tx) => insertEvent(tx, prepared, session.user.id))
 
     /*
       作ったものは `{ id }` だけを返す。画面は詳細ページへ移るだけで、中身は
