@@ -6,6 +6,7 @@ import { CalendarPlus, Server, Sparkles, Timer } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { HashtagSearchForm } from '@/components/common/HashtagSearchForm'
 import { PreEventCard } from '@/components/attendable/PreEventCard'
 import { usePreEventSections } from '@/lib/api/queries/pre-events'
 import type { PreEventListItemDto } from '@/server/serializers/pre-event'
@@ -71,6 +72,10 @@ export default function PreEventsListScreen() {
             日程調整を作成
           </Link>
         </Button>
+      </div>
+
+      <div className="mt-5">
+        <HashtagSearchForm scope="pre-events" />
       </div>
 
       <div className="mt-6">
