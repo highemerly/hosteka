@@ -87,11 +87,7 @@ export function PromotionTermsField({ terms }: { terms: string | null }) {
     )
   }
   return (
-    <Field
-      label="参加規約"
-      htmlFor="terms"
-      description="回答した人が同意した規約なので、変更できません。"
-    >
+    <Field label="参加規約" htmlFor="terms">
       <div
         id="terms"
         className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"
