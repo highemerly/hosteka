@@ -41,6 +41,8 @@ import { useViewer } from '@/hooks/useViewer'
 import { ApiClientError } from '@/lib/api/client'
 import { canEditEventTerms } from '@/lib/event-terms'
 import { useCreateEvent, useEvent, useUpdateEvent } from '@/lib/api/queries/events'
+import { usePreEvent, usePromotePreEvent } from '@/lib/api/queries/pre-events'
+import { eventDateFieldsFromOption, promotionCapacityError } from '@/lib/pre-event-promotion'
 import { useMyOrgs } from '@/lib/api/queries/orgs'
 import { eventFormSchema, HASHTAG_MAX, type EventFormValues } from '@/schemas/event'
 import { VALIDATION_LIMITS } from '@/schemas/limits'
@@ -59,6 +61,13 @@ import { EventPreview } from './EventPreview'
 import { UndecidedDateDialog } from './UndecidedDateDialog'
 import { buildPreviewEvent } from './preview-event'
 import { LockedOrganizationField } from '@/components/attendable/fields/LockedOrganizationField'
+import { toEventFormValuesFromPreEvent } from './pre-event-to-event-form'
+import {
+  initialPromotionOptionId,
+  PromotionDateField,
+  PromotionPlatformsField,
+  PromotionTermsField,
+} from './PromotionFields'
 
 /**
  * エラーのまとめに出す項目名。
@@ -149,10 +158,22 @@ function PlatformLabel({
  * 必須はイベント名と開催日だけ。それ以外は上から順に「多くの人が書くもの」
  * →「一部の人が使うもの」の順に並べる。
  */
-export default function EventFormScreen({ eventId }: { eventId?: string }) {
+export default function EventFormScreen({
+  eventId,
+  fromPreEventId,
+}: {
+  eventId?: string
+  /**
+   * 日程調整からイベントを作る（`/pre-events/[id]/promote`）。
+   * 開催日は候補日から選び、規約・参加できる人・主催の名義は日程調整のまま
+   * （`lib/pre-event-promotion.ts`。サーバーが同じ関数で突き合わせる）
+   */
+  fromPreEventId?: string
+}) {
   const router = useRouter()
   const confirm = useConfirm()
   const editing = Boolean(eventId)
+  const promoting = Boolean(fromPreEventId)
 
   const { data: existing, isPending: loading, error: loadError } = useEvent(eventId ?? '', {
     enabled: editing,
@@ -162,6 +183,21 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   const { data: orgs = [], isPending: orgsLoading } = useMyOrgs({ enabled: Boolean(viewer) })
   const create = useCreateEvent()
   const update = useUpdateEvent(eventId ?? '')
+
+  const {
+    data: source,
+    isPending: sourceLoading,
+    error: sourceError,
+  } = usePreEvent(fromPreEventId ?? '', { enabled: promoting })
+  const promote = usePromotePreEvent(fromPreEventId ?? '')
+  /*
+    選んだ候補日。**選ぶまでは、いちばん集まっている日**（`initialPromotionOptionId`）。
+    effect で初期値を入れない — 一度描いてから差し替わる
+    （`react-hooks/set-state-in-effect`）。
+  */
+  const [pickedOptionId, setPickedOptionId] = React.useState<string | null>(null)
+  const dateOptionId = pickedOptionId ?? (source ? initialPromotionOptionId(source) : null)
+  const pickedOption = source?.dateOptions.find((o) => o.id === dateOptionId) ?? null
 
   const form = useForm<EventFormValues>({
     resolver: standardSchemaResolver(eventFormSchema),
@@ -185,6 +221,33 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   }, [existing, reset])
 
   /*
+    日程調整から作るときは、取得できたら一度だけ流し込む。
+    **取り直しのたびに流し込まない** — 画面に戻ってきただけで取り直しが走り、
+    書きかけの定員や説明が日程調整の値に戻る。
+  */
+  const sourceApplied = React.useRef(false)
+  React.useEffect(() => {
+    if (!source || sourceApplied.current) return
+    const optionId = initialPromotionOptionId(source)
+    const option = source.dateOptions.find((o) => o.id === optionId)
+    if (!option) return
+    sourceApplied.current = true
+    reset(toEventFormValuesFromPreEvent(source, option))
+  }, [source, reset])
+
+  /** 候補日を選び直す。日時の欄は候補日から作る（画面からは書かせない） */
+  const pickOption = (id: string) => {
+    const option = source?.dateOptions.find((o) => o.id === id)
+    if (!option) return
+    setPickedOptionId(id)
+    for (const [name, value] of Object.entries(eventDateFieldsFromOption(option))) {
+      setValue(name as 'startDate' | 'startTime' | 'endDate' | 'endTime', value, {
+        shouldDirty: true,
+      })
+    }
+  }
+
+  /*
     参加できるプラットフォームの既定を、主催者自身のものに合わせる。
 
     **`EMPTY` に書けない。** 閲覧者は Cookie から読むので最初の描画では
@@ -198,14 +261,15 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   */
   const platformDefaultApplied = React.useRef(false)
   React.useEffect(() => {
-    if (editing || !viewer || platformDefaultApplied.current) return
+    // 日程調整から作るときも何もしない。参加できる人は日程調整のまま
+    if (editing || promoting || !viewer || platformDefaultApplied.current) return
     platformDefaultApplied.current = true
 
     const defaults = defaultPlatforms(viewer)
     for (const [name, value] of Object.entries(defaults)) {
       setValue(name as keyof typeof defaults, value)
     }
-  }, [editing, viewer, setValue])
+  }, [editing, promoting, viewer, setValue])
 
   /*
     どの欄を出すか。**保存する値ではない。**
@@ -375,7 +439,10 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
     setWithTerms(false)
   }
 
-  const pending = create.isPending || update.isPending
+  const pending = create.isPending || update.isPending || promote.isPending
+
+  /** 選んだ候補日で自動登録される人数。定員はこれより少なくできない */
+  const autoRegisterCount = pickedOption?.autoRegisterCount ?? 0
 
   /*
     送信できなかったとき、何が足りないのかをまとめて出す。
@@ -408,7 +475,10 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   const openPreview = handleSubmit((values) => {
     setInvalidFields([])
     const parsed = eventFormSchema.parse(values)
-    const org = orgs.find((o) => o.id === parsed.organizationId)
+    // 日程調整から作るときの名義は日程調整のもの。自分が管理していないグループのこともある
+    const org = promoting
+      ? (source?.organization ?? undefined)
+      : orgs.find((o) => o.id === parsed.organizationId)
 
     setPreviewEvent(
       buildPreviewEvent({
@@ -433,8 +503,33 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   const onSubmit = handleSubmit(async (values) => {
     setInvalidFields([])
     const payload = eventFormSchema.parse(values)
+
+    /*
+      定員が自動登録の人数に足りない。**サーバーと同じ関数で見る。**
+      送ってから断られると、どの欄を直せばいいかがトーストにしか出ない。
+    */
+    const capacityError = promoting
+      ? promotionCapacityError(payload.maxParticipants, autoRegisterCount)
+      : null
+    if (capacityError) {
+      form.setError('maxParticipants', { message: capacityError })
+      setInvalidFields([{ name: 'maxParticipants', label: '定員', message: capacityError }])
+      focusField('maxParticipants')
+      return
+    }
+
     try {
-      if (editing) {
+      /*
+        **日程調整から作るときは、ほかの作り方へ落とさない。** 候補日が無いまま
+        下へ進むと、日程調整と関係の無い普通のイベントができる。
+      */
+      if (promoting) {
+        if (!dateOptionId) return
+        const created = await promote.mutateAsync({ dateOptionId, event: payload })
+        setSaved(true)
+        toast.success('イベントを作成しました')
+        router.push(`/events/${created.id}`)
+      } else if (editing) {
         await update.mutateAsync(payload)
         setSaved(true)
         toast.success('イベントを更新しました')
@@ -464,6 +559,49 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
     )
   }
 
+  if (promoting && sourceLoading) {
+    return (
+      <div className="mx-auto w-full max-w-5xl space-y-4 px-4 py-8">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+    )
+  }
+
+  /*
+    作れない日程調整。**サーバーも同じ理由で断る**（`promote` の POST）が、
+    書き終えてから断られないよう、開いた時点で言う。
+  */
+  const promoteBlocked = !promoting
+    ? null
+    : sourceError || !source
+      ? '日程調整を読み込めませんでした。'
+      : source.promotion
+        ? 'この日程調整はもうイベントになっています。'
+        : !source.viewer.canDelete
+          ? 'この日程調整をイベントにできるのは、作成者とグループの管理者だけです。'
+          : source.dateOptions.length === 0
+            ? '候補日がありません。'
+            : null
+  if (promoteBlocked) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-4 py-8">
+        <p className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          {promoteBlocked}
+          {source?.promotion?.eventId ? (
+            <Link
+              href={`/events/${source.promotion.eventId}`}
+              className="ml-1 text-primary hover:underline"
+            >
+              イベントを見る
+            </Link>
+          ) : null}
+        </p>
+      </div>
+    )
+  }
+
   if (editing && loadError) {
     return (
       <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -488,6 +626,13 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
   */
   const guard = <UnsavedChangesGuard when={formState.isDirty && !saved} />
 
+  /** 戻る先。「やめる」も同じ */
+  const backHref = editing
+    ? `/events/${eventId}`
+    : promoting
+      ? `/pre-events/${fromPreEventId}`
+      : '/events'
+
   if (previewEvent) {
     return (
       <>
@@ -507,11 +652,11 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
     <div className="mx-auto w-full max-w-5xl px-4 py-6">
       {guard}
       <Link
-        href={editing ? `/events/${eventId}` : '/events'}
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronLeft className="size-4" />
-        {editing ? 'イベントに戻る' : 'イベントを探す'}
+        {editing ? 'イベントに戻る' : promoting ? '日程調整に戻る' : 'イベントを探す'}
       </Link>
 
       {/*
@@ -534,7 +679,7 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
         **編集では出さない。** すでに埋まっているものを前にして
         「どれが必須か」を読む場面ではない。
       */}
-      {!editing ? (
+      {!editing && !promoting ? (
         <p className="mt-2 text-sm text-muted-foreground">
           必須はイベント名と開催日だけです。
         </p>
@@ -556,129 +701,138 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
             />
           </Field>
 
-          <Field
-            label="開催日"
-            htmlFor="startDate"
-            required
-            /*
-              **開催日が必須なので、決まっていない人はここで詰まる。**
-              行き先は日程調整だが、イベントを作りに来た人はその存在を
-              知らない。適当な日で作ってしまうと、あとから前へは
-              動かせない（`events/[id]` の PUT が拒む）。
+          {promoting && source ? (
+            <PromotionDateField
+              preEvent={source}
+              value={dateOptionId}
+              onChange={pickOption}
+              error={errors.startDate?.message ?? errors.endDate?.message}
+            />
+          ) : (
+            <Field
+              label="開催日"
+              htmlFor="startDate"
+              required
+              /*
+                **開催日が必須なので、決まっていない人はここで詰まる。**
+                行き先は日程調整だが、イベントを作りに来た人はその存在を
+                知らない。適当な日で作ってしまうと、あとから前へは
+                動かせない（`events/[id]` の PUT が拒む）。
 
-              編集では出さない。日付はもう入っている。
-            */
-            aside={!editing ? <UndecidedDateDialog /> : undefined}
-            error={errors.startDate?.message ?? errors.endDate?.message}
-          >
-            {/*
-              **既定は日付だけ。** 時刻も終了日も、要る人だけが足す。
-              「空欄でよい」と書くより、欄が無いほうが分かりやすい。
+                編集では出さない。日付はもう入っている。
+              */
+              aside={!editing ? <UndecidedDateDialog /> : undefined}
+              error={errors.startDate?.message ?? errors.endDate?.message}
+            >
+              {/*
+                **既定は日付だけ。** 時刻も終了日も、要る人だけが足す。
+                「空欄でよい」と書くより、欄が無いほうが分かりやすい。
 
-              トグルではなく「＋◯◯を指定」にしてある。ここで決めるのは
-              設定のオン・オフではなく「入力欄を出すかどうか」なので、
-              状態を持つスイッチより、その場の操作のほうが素直に読める。
-            */}
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {/* 終了日が出たときだけ「開始」と書く。1行しかないうちは
-                    何の日付か迷いようがないので、ラベルは要らない */}
+                トグルではなく「＋◯◯を指定」にしてある。ここで決めるのは
+                設定のオン・オフではなく「入力欄を出すかどうか」なので、
+                状態を持つスイッチより、その場の操作のほうが素直に読める。
+              */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* 終了日が出たときだけ「開始」と書く。1行しかないうちは
+                      何の日付か迷いようがないので、ラベルは要らない */}
+                  {withEndDate ? (
+                    <span className="w-8 shrink-0 text-sm text-muted-foreground">開始</span>
+                  ) : null}
+                  <Input
+                    type="date"
+                    className="w-auto"
+                    {...register('startDate')}
+                    {...fieldAria('startDate', errors.startDate?.message)}
+                  />
+                  {withTime ? (
+                    <>
+                      <Input
+                        type="time"
+                        className="w-auto"
+                        {...register('startTime')}
+                        aria-label="開始時刻"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="時刻の指定をやめる"
+                        title="時刻の指定をやめる"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setWithTime(false)
+                          setValue('startTime', '')
+                          setValue('endTime', '')
+                        }}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary"
+                      onClick={() => setWithTime(true)}
+                    >
+                      <Plus className="size-4" />
+                      時刻を指定
+                    </Button>
+                  )}
+                </div>
+
                 {withEndDate ? (
-                  <span className="w-8 shrink-0 text-sm text-muted-foreground">開始</span>
-                ) : null}
-                <Input
-                  type="date"
-                  className="w-auto"
-                  {...register('startDate')}
-                  {...fieldAria('startDate', errors.startDate?.message)}
-                />
-                {withTime ? (
-                  <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="w-8 shrink-0 text-sm text-muted-foreground">終了</span>
                     <Input
-                      type="time"
+                      type="date"
+                      id="endDate"
                       className="w-auto"
-                      {...register('startTime')}
-                      aria-label="開始時刻"
+                      {...register('endDate')}
+                      aria-label="終了日"
                     />
+                    {withTime ? (
+                      <Input
+                        type="time"
+                        className="w-auto"
+                        {...register('endTime')}
+                        aria-label="終了時刻"
+                      />
+                    ) : null}
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label="時刻の指定をやめる"
-                      title="時刻の指定をやめる"
+                      aria-label="終了日の指定をやめる"
+                      title="終了日の指定をやめる"
                       className="text-muted-foreground hover:text-foreground"
                       onClick={() => {
-                        setWithTime(false)
-                        setValue('startTime', '')
+                        setWithEndDate(false)
+                        setValue('endDate', '')
                         setValue('endTime', '')
                       }}
                     >
                       <X className="size-4" />
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="text-primary"
-                    onClick={() => setWithTime(true)}
+                    onClick={() => setWithEndDate(true)}
                   >
                     <Plus className="size-4" />
-                    時刻を指定
+                    終了日を指定
                   </Button>
                 )}
+
               </div>
-
-              {withEndDate ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="w-8 shrink-0 text-sm text-muted-foreground">終了</span>
-                  <Input
-                    type="date"
-                    id="endDate"
-                    className="w-auto"
-                    {...register('endDate')}
-                    aria-label="終了日"
-                  />
-                  {withTime ? (
-                    <Input
-                      type="time"
-                      className="w-auto"
-                      {...register('endTime')}
-                      aria-label="終了時刻"
-                    />
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="終了日の指定をやめる"
-                    title="終了日の指定をやめる"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setWithEndDate(false)
-                      setValue('endDate', '')
-                      setValue('endTime', '')
-                    }}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-primary"
-                  onClick={() => setWithEndDate(true)}
-                >
-                  <Plus className="size-4" />
-                  終了日を指定
-                </Button>
-              )}
-
-            </div>
-          </Field>
+            </Field>
+          )}
 
           <Field
             label="場所"
@@ -813,7 +967,11 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
                ここは「定員を決めたとき何が起きるか」だけを書く */
             description={
               '設定すると、定員を超えた場合に新たに参加登録できなくなります。' +
-              (allowParticipationRequest ? 'ただし、参加リクエストは受け付けます。' : '')
+              (allowParticipationRequest ? 'ただし、参加リクエストは受け付けます。' : '') +
+              // 下回ると作れない（サーバーが断る）。知らないと送ってから直すことになる
+              (autoRegisterCount > 0
+                ? `自動で参加登録される${autoRegisterCount}人より少なくはできません。`
+                : '')
             }
           >
             <Controller
@@ -824,7 +982,7 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
                   id="maxParticipants"
                   type="number"
                   inputMode="numeric"
-                  min={1}
+                  min={Math.max(1, autoRegisterCount)}
                   placeholder="人数制限なし"
                   className="w-40"
                   value={field.value ?? ''}
@@ -843,83 +1001,87 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
             ボタンがその id を持つので、エラーのまとめから飛んで来ても
             行き先がある（`focusField`）。
           */}
-          <Field
-            label="参加規約"
-            htmlFor="terms"
-            // 書き方の解説は、書ける欄が出ているときだけ
-            aside={withTerms && !termsLocked ? <MarkdownHint /> : undefined}
-            error={errors.terms?.message}
-            hint={
-              withTerms && !termsLocked
-                ? `${terms.length} / ${VALIDATION_LIMITS.TERMS}`
-                : undefined
-            }
-            description={
-              termsLocked
-                ? withTerms
-                  ? '参加登録した人がいるので、内容は変更できません。削除はできます。'
-                  : '参加登録した人がいるので設定できません。'
-                : '設定すると、参加登録の前に同意を求めます。参加登録した人ができたあとは、内容を変更できません。'
-            }
-          >
-            {!withTerms ? (
-              /*
-                規約なしで登録が始まったイベントには**後から足せない** —
-                同意していない内容に同意したことになる人ができる。
-                そのときはボタンを出さず、状態だけを置く。
-              */
-              termsLocked ? (
-                <p className="text-sm text-muted-foreground">設定していません</p>
-              ) : (
-                <Button
-                  type="button"
-                  id="terms"
-                  variant="default"
-                  onClick={() => setWithTerms(true)}
-                >
-                  <Plus className="size-5" />
-                  参加規約を設定する
-                </Button>
-              )
-            ) : (
-              <div className="space-y-2">
-                {termsLocked ? (
-                  /*
-                    サーバーが同じ条件で書き込みを拒む（events/[id] の PUT）。
-                    編集できるように見せると、書き直したうえで保存に失敗する。
-                  */
-                  <div
-                    id="terms"
-                    className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"
-                  >
-                    <SafeMarkdown>{existing?.terms ?? ''}</SafeMarkdown>
-                  </div>
+          {promoting ? (
+            <PromotionTermsField terms={source?.terms ?? null} />
+          ) : (
+            <Field
+              label="参加規約"
+              htmlFor="terms"
+              // 書き方の解説は、書ける欄が出ているときだけ
+              aside={withTerms && !termsLocked ? <MarkdownHint /> : undefined}
+              error={errors.terms?.message}
+              hint={
+                withTerms && !termsLocked
+                  ? `${terms.length} / ${VALIDATION_LIMITS.TERMS}`
+                  : undefined
+              }
+              description={
+                termsLocked
+                  ? withTerms
+                    ? '参加登録した人がいるので、内容は変更できません。削除はできます。'
+                    : '参加登録した人がいるので設定できません。'
+                  : '設定すると、参加登録の前に同意を求めます。参加登録した人ができたあとは、内容を変更できません。'
+              }
+            >
+              {!withTerms ? (
+                /*
+                  規約なしで登録が始まったイベントには**後から足せない** —
+                  同意していない内容に同意したことになる人ができる。
+                  そのときはボタンを出さず、状態だけを置く。
+                */
+                termsLocked ? (
+                  <p className="text-sm text-muted-foreground">設定していません</p>
                 ) : (
-                  <Controller
-                    control={control}
-                    name="terms"
-                    render={({ field }) => (
-                      <MarkdownEditor
-                        id="terms"
-                        value={field.value ?? ''}
-                        onChange={field.onChange}
-                        rows={6}
-                        invalid={Boolean(errors.terms)}
-                        placeholder={TERMS_PLACEHOLDER}
-                      />
-                    )}
-                  />
-                )}
+                  <Button
+                    type="button"
+                    id="terms"
+                    variant="default"
+                    onClick={() => setWithTerms(true)}
+                  >
+                    <Plus className="size-5" />
+                    参加規約を設定する
+                  </Button>
+                )
+              ) : (
+                <div className="space-y-2">
+                  {termsLocked ? (
+                    /*
+                      サーバーが同じ条件で書き込みを拒む（events/[id] の PUT）。
+                      編集できるように見せると、書き直したうえで保存に失敗する。
+                    */
+                    <div
+                      id="terms"
+                      className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"
+                    >
+                      <SafeMarkdown>{existing?.terms ?? ''}</SafeMarkdown>
+                    </div>
+                  ) : (
+                    <Controller
+                      control={control}
+                      name="terms"
+                      render={({ field }) => (
+                        <MarkdownEditor
+                          id="terms"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          rows={6}
+                          invalid={Boolean(errors.terms)}
+                          placeholder={TERMS_PLACEHOLDER}
+                        />
+                      )}
+                    />
+                  )}
 
-                {/* **登録した人がいても消せる。** 主催者が自分の求めを
-                    取り下げるだけで、不利になる参加者はいない */}
-                <Button type="button" variant="destructive" size="sm" onClick={removeTerms}>
-                  <X className="size-4" />
-                  参加規約を削除する
-                </Button>
-              </div>
-            )}
-          </Field>
+                  {/* **登録した人がいても消せる。** 主催者が自分の求めを
+                      取り下げるだけで、不利になる参加者はいない */}
+                  <Button type="button" variant="destructive" size="sm" onClick={removeTerms}>
+                    <X className="size-4" />
+                    参加規約を削除する
+                  </Button>
+                </div>
+              )}
+            </Field>
+          )}
 
           {/*
             **行き先だけを置く。** 以前はこの節にあった設定なので、
@@ -928,21 +1090,25 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
             今の設定まで写さない。触れない値が2箇所に出ると、どちらが
             効いているのかを読む手がかりが無くなる。
           */}
-          <div className="space-y-2">
-            <span className="block text-base font-medium text-foreground">
-              参加登録に利用できるプラットフォーム
-            </span>
-            <p className="text-sm text-muted-foreground">
-              <button
-                type="button"
-                onClick={goToPlatforms}
-                className="text-primary underline underline-offset-2 hover:no-underline"
-              >
-                高度な設定
-              </button>
-              に移動しました
-            </p>
-          </div>
+          {promoting && source ? (
+            <PromotionPlatformsField preEvent={source} />
+          ) : (
+            <div className="space-y-2">
+              <span className="block text-base font-medium text-foreground">
+                参加登録に利用できるプラットフォーム
+              </span>
+              <p className="text-sm text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={goToPlatforms}
+                  className="text-primary underline underline-offset-2 hover:no-underline"
+                >
+                  高度な設定
+                </button>
+                に移動しました
+              </p>
+            </div>
+          )}
         </FormSection>
 
         {/*
@@ -992,7 +1158,12 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
             開いて確かめさせていた。ほとんどは自分名義なので、既定のままなら
             何も出さない。
           */}
-          {existing && !existing.viewer.canChangeOrganization ? (
+          {promoting ? (
+            <LockedOrganizationField
+              organization={source?.organization ?? null}
+              note={null}
+            />
+          ) : existing && !existing.viewer.canChangeOrganization ? (
             <LockedOrganizationField organization={existing.organization} />
           ) : (
             <Controller
@@ -1177,116 +1348,119 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
             **ほとんどの人は触らないので、トグルの裏に置く**（`customPlatforms`）。
             面の中にあった見出しは外した — トグルの名前と同じことを2回言う。
           */}
-          <div className="space-y-3">
-            <ToggleField
-              label="参加登録に利用できるプラットフォームをカスタマイズする"
-              /* 既定の範囲は閉じたままでは見えない。知らないと、別の
-                 プラットフォームの知り合いが参加できないことに後で気づく */
-              description="オフのときは、あなたと同じプラットフォームのアカウントだけが参加登録できます。"
-              checked={customPlatforms}
-              onCheckedChange={toggleCustomPlatforms}
-            />
-            {customPlatforms ? (
-              <div
-                id="platforms"
-                role="group"
-                aria-label="参加登録に利用できるプラットフォーム"
-                aria-describedby={
-                  errors.isAllowedForFediverse?.message ? 'isAllowedForFediverse-error' : undefined
-                }
-                className="space-y-2 rounded-lg border border-border bg-[var(--surface-subtle)] p-3"
-              >
-                <div className="space-y-1">
-                  <Controller
-                    control={control}
-                    name="isAllowedForFediverse"
-                    render={({ field }) => (
-                      <ToggleField
-                        id="isAllowedForFediverse"
-                        label={
-                          <PlatformLabel icons={[MastodonIcon, MisskeyIcon, PleromaIcon]}>
-                            Fediverse
-                          </PlatformLabel>
-                        }
-                        description={
-                          lockedPlatform === 'isAllowedForFediverse'
-                            ? `Mastodon・Misskey・Pleroma${LOCKED_PLATFORM_NOTE}`
-                            : 'Mastodon・Misskey・Pleroma'
-                        }
-                        disabled={lockedPlatform === 'isAllowedForFediverse'}
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
+          {/* 日程調整から作るときは日程調整のまま（参加条件の節に読むだけの姿で出す） */}
+          {!promoting ? (
+            <div className="space-y-3">
+              <ToggleField
+                label="参加登録に利用できるプラットフォームをカスタマイズする"
+                /* 既定の範囲は閉じたままでは見えない。知らないと、別の
+                   プラットフォームの知り合いが参加できないことに後で気づく */
+                description="オフのときは、あなたと同じプラットフォームのアカウントだけが参加登録できます。"
+                checked={customPlatforms}
+                onCheckedChange={toggleCustomPlatforms}
+              />
+              {customPlatforms ? (
+                <div
+                  id="platforms"
+                  role="group"
+                  aria-label="参加登録に利用できるプラットフォーム"
+                  aria-describedby={
+                    errors.isAllowedForFediverse?.message ? 'isAllowedForFediverse-error' : undefined
+                  }
+                  className="space-y-2 rounded-lg border border-border bg-[var(--surface-subtle)] p-3"
+                >
+                  <div className="space-y-1">
+                    <Controller
+                      control={control}
+                      name="isAllowedForFediverse"
+                      render={({ field }) => (
+                        <ToggleField
+                          id="isAllowedForFediverse"
+                          label={
+                            <PlatformLabel icons={[MastodonIcon, MisskeyIcon, PleromaIcon]}>
+                              Fediverse
+                            </PlatformLabel>
+                          }
+                          description={
+                            lockedPlatform === 'isAllowedForFediverse'
+                              ? `Mastodon・Misskey・Pleroma${LOCKED_PLATFORM_NOTE}`
+                              : 'Mastodon・Misskey・Pleroma'
+                          }
+                          disabled={lockedPlatform === 'isAllowedForFediverse'}
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
 
-                  {/* サーバー限定は Fediverse にしか掛からない。
-                      離して置くと、Discord や X にも掛かるように読める */}
-                  {fediverse ? (
-                    <div className="border-l-2 border-border pl-3">
-                      <Controller
-                        control={control}
-                        name="allowedFediverseServers"
-                        render={({ field }) => (
-                          <ServerRestrictionField
-                            servers={field.value}
-                            onChange={field.onChange}
-                            affectsFediverseOnly={!discord && !twitter}
-                          />
-                        )}
-                      />
-                    </div>
+                    {/* サーバー限定は Fediverse にしか掛からない。
+                        離して置くと、Discord や X にも掛かるように読める */}
+                    {fediverse ? (
+                      <div className="border-l-2 border-border pl-3">
+                        <Controller
+                          control={control}
+                          name="allowedFediverseServers"
+                          render={({ field }) => (
+                            <ServerRestrictionField
+                              servers={field.value}
+                              onChange={field.onChange}
+                              affectsFediverseOnly={!discord && !twitter}
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : null}
+
+                    <Controller
+                      control={control}
+                      name="isAllowedForDiscord"
+                      render={({ field }) => (
+                        <ToggleField
+                          label={<PlatformLabel icons={[DiscordIcon]}>Discord</PlatformLabel>}
+                          description={
+                            lockedPlatform === 'isAllowedForDiscord'
+                              ? LOCKED_PLATFORM_NOTE_ALONE
+                              : undefined
+                          }
+                          disabled={lockedPlatform === 'isAllowedForDiscord'}
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="isAllowedForTwitter"
+                      render={({ field }) => (
+                        <ToggleField
+                          label={<PlatformLabel icons={[XIcon]}>X</PlatformLabel>}
+                          description={
+                            lockedPlatform === 'isAllowedForTwitter'
+                              ? LOCKED_PLATFORM_NOTE_ALONE
+                              : undefined
+                          }
+                          disabled={lockedPlatform === 'isAllowedForTwitter'}
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {/* エラーの置き方と role は `Field` に揃える */}
+                  {errors.isAllowedForFediverse?.message ? (
+                    <p
+                      id="isAllowedForFediverse-error"
+                      role="alert"
+                      className="px-1 text-sm font-medium text-destructive"
+                    >
+                      {errors.isAllowedForFediverse.message}
+                    </p>
                   ) : null}
-
-                  <Controller
-                    control={control}
-                    name="isAllowedForDiscord"
-                    render={({ field }) => (
-                      <ToggleField
-                        label={<PlatformLabel icons={[DiscordIcon]}>Discord</PlatformLabel>}
-                        description={
-                          lockedPlatform === 'isAllowedForDiscord'
-                            ? LOCKED_PLATFORM_NOTE_ALONE
-                            : undefined
-                        }
-                        disabled={lockedPlatform === 'isAllowedForDiscord'}
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
-                  <Controller
-                    control={control}
-                    name="isAllowedForTwitter"
-                    render={({ field }) => (
-                      <ToggleField
-                        label={<PlatformLabel icons={[XIcon]}>X</PlatformLabel>}
-                        description={
-                          lockedPlatform === 'isAllowedForTwitter'
-                            ? LOCKED_PLATFORM_NOTE_ALONE
-                            : undefined
-                        }
-                        disabled={lockedPlatform === 'isAllowedForTwitter'}
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
                 </div>
-
-                {/* エラーの置き方と role は `Field` に揃える */}
-                {errors.isAllowedForFediverse?.message ? (
-                  <p
-                    id="isAllowedForFediverse-error"
-                    role="alert"
-                    className="px-1 text-sm font-medium text-destructive"
-                  >
-                    {errors.isAllowedForFediverse.message}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
         </FormSection>
 
         {invalidFields.length > 0 ? (
@@ -1315,7 +1489,7 @@ export default function EventFormScreen({ eventId }: { eventId?: string }) {
 
         <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
           <Button type="button" variant="default" asChild>
-            <Link href={editing ? `/events/${eventId}` : '/events'}>やめる</Link>
+            <Link href={backHref}>やめる</Link>
           </Button>
           {/* 作成の手前に置く。プレビューを見てから決められる並びにする */}
           <Button type="button" variant="default" onClick={openPreview} disabled={pending}>

@@ -18,6 +18,7 @@ const ROW = {
   id: 'pre_1',
   title: '日程を決める',
   description: null,
+  hashtags: null,
   location: null,
   fee: null,
   relatedUrl: null,
@@ -30,6 +31,9 @@ const ROW = {
   isAllowedForFediverse: true,
   isAllowedForDiscord: false,
   isAllowedForTwitter: false,
+  promotedAt: null,
+  promotedEventId: null,
+  promotedDateOptionId: null,
   createdAt: new Date('2026-07-01T00:00:00Z'),
   updatedAt: new Date('2026-07-01T00:00:00Z'),
   creator: USER('host'),
@@ -39,10 +43,10 @@ const ROW = {
     { id: 'd2', startDate: new Date('2026-09-20T10:00:00Z'), endDate: null, displayOrder: 1 },
   ],
   participants: [
-    { userId: 'me', dateOptionId: 'd1', status: 'available', comment: 'よろしく', autoRegisterWhenPromoted: true, createdAt: new Date('2026-07-02T00:00:00Z'), user: USER('me') },
-    { userId: 'me', dateOptionId: 'd2', status: 'unavailable', comment: 'よろしく', autoRegisterWhenPromoted: true, createdAt: new Date('2026-07-02T00:00:00Z'), user: USER('me') },
-    { userId: 'other', dateOptionId: 'd1', status: 'maybe', comment: null, autoRegisterWhenPromoted: false, createdAt: new Date('2026-07-01T12:00:00Z'), user: USER('other') },
-    { userId: 'other', dateOptionId: 'd2', status: 'available', comment: null, autoRegisterWhenPromoted: false, createdAt: new Date('2026-07-01T12:00:00Z'), user: USER('other') },
+    { userId: 'me', dateOptionId: 'd1', status: 'available', comment: 'よろしく', autoRegisterWhenPromoted: true, termsAcceptedAt: new Date('2026-07-02T00:00:00Z'), createdAt: new Date('2026-07-02T00:00:00Z'), user: USER('me') },
+    { userId: 'me', dateOptionId: 'd2', status: 'unavailable', comment: 'よろしく', autoRegisterWhenPromoted: true, termsAcceptedAt: new Date('2026-07-02T00:00:00Z'), createdAt: new Date('2026-07-02T00:00:00Z'), user: USER('me') },
+    { userId: 'other', dateOptionId: 'd1', status: 'maybe', comment: null, autoRegisterWhenPromoted: false, termsAcceptedAt: null, createdAt: new Date('2026-07-01T12:00:00Z'), user: USER('other') },
+    { userId: 'other', dateOptionId: 'd2', status: 'available', comment: null, autoRegisterWhenPromoted: false, termsAcceptedAt: null, createdAt: new Date('2026-07-01T12:00:00Z'), user: USER('other') },
   ],
 }
 
@@ -93,7 +97,7 @@ describe('serializePreEventDetail', () => {
       {
         ...ROW,
         participants: [
-          { userId: 'no', dateOptionId: 'd1', status: 'unavailable', comment: '両日とも無理です', autoRegisterWhenPromoted: false, createdAt: new Date('2026-07-03T00:00:00Z'), user: USER('no') },
+          { userId: 'no', dateOptionId: 'd1', status: 'unavailable', comment: '両日とも無理です', autoRegisterWhenPromoted: false, termsAcceptedAt: null, createdAt: new Date('2026-07-03T00:00:00Z'), user: USER('no') },
         ],
       },
       viewer(null)
@@ -110,6 +114,7 @@ describe('serializePreEventDetail', () => {
       votes: { d1: 'available', d2: 'unavailable' },
       comment: 'よろしく',
       autoRegisterWhenPromoted: true,
+      termsAccepted: true,
     })
   })
 

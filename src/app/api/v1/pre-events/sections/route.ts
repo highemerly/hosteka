@@ -1,6 +1,7 @@
 import { defineRoute } from '@/server/http/define-route'
 import { prisma } from '@/lib/prisma'
 import {
+  openPreEventConditions,
   PRE_EVENT_LIST_SELECT,
   PUBLIC_PRE_EVENT_CONDITIONS,
 } from '@/server/queries/pre-event-list'
@@ -40,15 +41,10 @@ export const GET = defineRoute({
     const userPlatform = session?.user.platform
     const now = new Date()
 
-    /*
-      母集合。**絞り込みはこれだけ。** 利用者に条件を選ばせない。
-
-      「終わっていない」は**未来の候補日が1つでも残っていること**。
-      日程調整には開催日が無いので、候補日の有無で判定する。
-    */
+    // 母集合。**絞り込みはこれだけ。** 利用者に条件を選ばせない
     const base: Prisma.PreEventWhereInput[] = [
       ...PUBLIC_PRE_EVENT_CONDITIONS,
-      { dateOptions: { some: { startDate: { gte: now } } } },
+      ...openPreEventConditions(now),
     ]
 
     // 既に回答したものは出さない。未ログインなら外すものがない

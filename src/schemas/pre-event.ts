@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { VALIDATION_LIMITS } from './limits'
 import { allowedFediverseServersSchema } from './allowed-servers'
+import { eventFormSchema, hashtagsSchema } from './event'
 
 /**
  * 自分の日程調整一覧（`/dashboard/my-pre-events`）のクエリ。
@@ -52,7 +53,26 @@ export const respondPreEventBody = z.object({
     .nullish(),
   /** 日程が決まったら自動で参加登録するか。許可されていなければルートが断る */
   autoRegisterWhenPromoted: z.boolean().optional(),
+  /**
+   * 参加規約への同意。規約のある日程調整でだけ要る（判定はルート側）。
+   * 一度同意した人は、回答し直すときに送らなくてよい
+   */
+  termsAccepted: z.boolean().optional(),
 })
+
+/**
+ * 日程調整をイベントにする本文。
+ *
+ * `event` は作成画面と同じ形（`eventFormSchema`）。日時・規約・参加できる人・
+ * 主催の名義は日程調整（と選んだ候補日）と同じでなければならないが、
+ * **それを見るのはルート**（DB を引く必要がある。`lib/pre-event-promotion.ts`）。
+ */
+export const promotePreEventBody = z.object({
+  dateOptionId: z.string().trim().min(1, '候補日を選んでください'),
+  event: eventFormSchema,
+})
+
+export type PromotePreEventBody = z.input<typeof promotePreEventBody>
 
 // =============================================================================
 // 作成・編集フォーム
@@ -126,6 +146,7 @@ export const preEventFormSchema = z
         `タイトルは${VALIDATION_LIMITS.EVENT_TITLE}文字以内で入力してください`
       ),
     description: optionalPreEventText(VALIDATION_LIMITS.DESCRIPTION, '説明'),
+    hashtags: hashtagsSchema,
     location: optionalPreEventText(VALIDATION_LIMITS.LOCATION, '場所'),
     fee: optionalPreEventText(VALIDATION_LIMITS.FEE, '参加費'),
     terms: optionalPreEventText(VALIDATION_LIMITS.TERMS, '参加規約'),
@@ -246,6 +267,7 @@ export const preEventPayloadSchema = z.object({
       `タイトルは${VALIDATION_LIMITS.EVENT_TITLE}文字以内で入力してください`
     ),
   description: payloadText(VALIDATION_LIMITS.DESCRIPTION, '説明'),
+  hashtags: hashtagsSchema,
   location: payloadText(VALIDATION_LIMITS.LOCATION, '場所'),
   fee: payloadText(VALIDATION_LIMITS.FEE, '参加費'),
   terms: payloadText(VALIDATION_LIMITS.TERMS, '参加規約'),

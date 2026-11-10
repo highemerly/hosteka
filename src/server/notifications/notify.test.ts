@@ -10,6 +10,7 @@ import {
   deliver,
   notifyEventUpdated,
   notifyParticipationChanged,
+  notifyPreEventPromoted,
   notifyPreEventUpdated,
 } from './notify'
 
@@ -295,5 +296,35 @@ describe('変更が無いときは送らない', () => {
     expect(prismaMock.eventParticipant.findMany).not.toHaveBeenCalled()
     expect(prismaMock.preEventParticipant.findMany).not.toHaveBeenCalled()
     expect(prismaMock.notification.createMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('日程調整がイベントになったとき', () => {
+  it('回答した全員へ、イベントを宛先にして送る。自動で登録された人にだけ registered を付ける', async () => {
+    prismaMock.preEventParticipant.findMany.mockResolvedValue([
+      { userId: 'alice' },
+      { userId: 'alice' },
+      { userId: 'bob' },
+      { userId: 'host_1' },
+    ])
+    prismaMock.user.findMany.mockImplementation(async ({ where }: { where: { id: { in: string[] } } }) =>
+      users(where.id.in)
+    )
+
+    await notifyPreEventPromoted({ id: 'pre_1' }, { id: 'evt_1', title: '忘年会' }, ['alice'], 'host_1')
+
+    type Row = { userId: string; targetType: string; targetId: string; payload: string }
+    const rows = prismaMock.notification.createMany.mock.calls.flatMap(
+      (call) => (call[0] as { data: Row[] }).data
+    )
+    expect(
+      rows
+        .map((r) => ({ userId: r.userId, target: `${r.targetType}:${r.targetId}`, payload: JSON.parse(r.payload) }))
+        .sort((a, b) => a.userId.localeCompare(b.userId))
+    ).toEqual([
+      { userId: 'alice', target: 'event:evt_1', payload: { title: '忘年会', registered: true } },
+      // 主催者（原因になった本人）には送らない
+      { userId: 'bob', target: 'event:evt_1', payload: { title: '忘年会' } },
+    ])
   })
 })

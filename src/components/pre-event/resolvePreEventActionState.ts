@@ -22,10 +22,16 @@ export type PreEventActionState =
   | { kind: 'ended'; answered: boolean }
   /** プラットフォームやサーバーの条件を満たさない */
   | { kind: 'ineligible'; reason: 'platform' | 'server' | null }
+  /**
+   * イベントになった。もう回答できない。行き先はイベント
+   * （`eventId` はイベントが消えていれば null）
+   */
+  | { kind: 'promoted'; eventId: string | null }
 
 export function resolvePreEventActionState(input: {
   dateOptions: { startDate: string }[]
   registrationDeadline: string | null
+  promotion: PreEventDetailDto['promotion']
   viewer: PreEventDetailDto['viewer']
   now?: Date
 }): PreEventActionState {
@@ -35,6 +41,13 @@ export function resolvePreEventActionState(input: {
 
   // 主催者は終了後も内容を見に来る
   if (viewer.isOrganizer) return { kind: 'host', answered }
+
+  /*
+    **イベントになったら、ほかの何よりも先に言う。** 締切や終了より前に見る —
+    決まった日程調整に来た人が知りたいのは「どこで参加登録するか」で、
+    回答できない理由ではない。未ログインの人にも同じものを出す。
+  */
+  if (input.promotion) return { kind: 'promoted', eventId: input.promotion.eventId }
 
   /*
     終了の判定は**未来の候補日が1つも無いこと**。日程調整に開催日は

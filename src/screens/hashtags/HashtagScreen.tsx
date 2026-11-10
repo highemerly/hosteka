@@ -10,9 +10,14 @@ import { Input } from '@/components/ui/input'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventCard } from '@/components/event/EventCard'
+import { PreEventCard } from '@/components/attendable/PreEventCard'
 import { Pagination } from '@/components/common/Pagination'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { useHashtagEvents, type HashtagScope } from '@/lib/api/queries/events'
+import { useHashtagEvents } from '@/lib/api/queries/events'
+import { useHashtagSummary } from '@/lib/api/queries/hashtags'
+import { useHashtagPreEvents } from '@/lib/api/queries/pre-events'
+import { hashtagPath } from '@/lib/hashtags'
+import { isHashtagScope, type HashtagScope } from '@/schemas/hashtag'
 
 /**
  * 1ページあたりの件数。
@@ -24,30 +29,31 @@ import { useHashtagEvents, type HashtagScope } from '@/lib/api/queries/events'
 const PER_PAGE_NARROW = 6
 const PER_PAGE_WIDE = 12
 
-const SCOPES: { value: HashtagScope; label: string }[] = [
-  { value: 'upcoming', label: '開催予定' },
-  { value: 'past', label: '終了' },
+const SCOPES: { value: HashtagScope; label: string; empty: string }[] = [
+  { value: 'upcoming', label: '開催予定', empty: '開催予定のイベント' },
+  { value: 'pre-events', label: '日程調整中', empty: '受付中の日程調整' },
+  { value: 'past', label: '終了', empty: '終了したイベント' },
 ]
 
-function isScope(value: string | null): value is HashtagScope {
-  return value === 'upcoming' || value === 'past'
-}
-
 /**
- * ハッシュタグ別のイベント一覧。
+ * ハッシュタグのページ。イベントと日程調整の両方を出す。
  *
  * 一覧画面と同じカードを使う。同じものが違う姿で出てくると、
  * 「これは別の何かか」と読む側に確かめさせることになる。
  *
+ * **イベントと日程調整は切り替えで分ける**（`schemas/hashtag.ts`）。
+ * 開いた先は「開催予定」なので、**切り替えの見出しに件数を出す** —
+ * 出さないと、日程調整中のものがあっても気づけない。
+ *
  * **絞り込みとページはURLに持つ。** 「終了したイベントの2ページ目」を
  * そのまま貼れるし、戻るで元の位置へ帰れる。
  */
-export default function HashtagEventsScreen({ tag }: { tag: string }) {
+export default function HashtagScreen({ tag }: { tag: string }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   const scopeParam = searchParams.get('scope')
-  const scope: HashtagScope = isScope(scopeParam) ? scopeParam : 'upcoming'
+  const scope: HashtagScope = isHashtagScope(scopeParam) ? scopeParam : 'upcoming'
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
   const isWide = useMediaQuery('(min-width: 640px)')
@@ -65,7 +71,17 @@ export default function HashtagEventsScreen({ tag }: { tag: string }) {
     setSearch(tag)
   }
 
-  const { data, isPending, error } = useHashtagEvents(tag, scope, page, perPage)
+  const showPreEvents = scope === 'pre-events'
+  const summary = useHashtagSummary(tag)
+  const events = useHashtagEvents(
+    tag,
+    showPreEvents ? 'upcoming' : scope,
+    page,
+    perPage,
+    !showPreEvents
+  )
+  const preEvents = useHashtagPreEvents(tag, page, perPage, showPreEvents)
+  const list = showPreEvents ? preEvents : events
 
   const navigate = (next: { scope?: HashtagScope; page?: number }) => {
     const params = new URLSearchParams()
@@ -74,16 +90,17 @@ export default function HashtagEventsScreen({ tag }: { tag: string }) {
     if (nextScope !== 'upcoming') params.set('scope', nextScope)
     if (nextPage > 1) params.set('page', String(nextPage))
     const query = params.toString()
-    router.push(`/events/hashtag/${encodeURIComponent(tag)}${query ? `?${query}` : ''}`, {
-      scroll: false,
-    })
+    router.push(`${hashtagPath(tag)}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault()
     const next = search.trim().replace(/^#/, '')
-    if (next && next !== tag) router.push(`/events/hashtag/${encodeURIComponent(next)}`)
+    if (next && next !== tag) router.push(hashtagPath(next))
   }
+
+  const counts = summary.data?.counts
+  const current = SCOPES.find((s) => s.value === scope)!
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6">
@@ -111,48 +128,58 @@ export default function HashtagEventsScreen({ tag }: { tag: string }) {
         </Button>
       </form>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <SegmentedControl
-          aria-label="表示するイベント"
-          value={scope}
-          onValueChange={(next) => navigate({ scope: next, page: 1 })}
-          options={SCOPES}
-        />
-        {data ? (
-          <span className="text-sm text-muted-foreground">{data.meta.total}件</span>
-        ) : null}
-      </div>
+      <SegmentedControl
+        className="mt-4"
+        aria-label="表示する一覧"
+        value={scope}
+        onValueChange={(next) => navigate({ scope: next, page: 1 })}
+        options={SCOPES.map(({ value, label }) => ({
+          value,
+          label: (
+            <>
+              {label}
+              {counts ? (
+                <span className="ml-1.5 tabular-nums text-muted-foreground">
+                  {counts[value]}
+                </span>
+              ) : null}
+            </>
+          ),
+        }))}
+      />
 
       <div className="mt-5">
-        {error ? (
+        {list.error ? (
           <p className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            イベントを読み込めませんでした。時間をおいて開き直してください。
+            読み込めませんでした。時間をおいて開き直してください。
           </p>
-        ) : isPending ? (
+        ) : list.isPending ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} className="h-40 rounded-xl" />
             ))}
           </div>
-        ) : data.items.length === 0 ? (
+        ) : list.data.items.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-8 text-center">
             <p className="text-sm text-foreground">
-              #{tag} の{scope === 'past' ? '終了した' : '開催予定の'}イベントはありません。
+              #{tag} の{current.empty}はありません。
             </p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
+            {showPreEvents
+              ? preEvents.data?.items.map((preEvent) => (
+                  <PreEventCard key={preEvent.id} preEvent={preEvent} />
+                ))
+              : events.data?.items.map((event) => <EventCard key={event.id} event={event} />)}
           </div>
         )}
       </div>
 
-      {!isPending && !error ? (
+      {!list.isPending && !list.error ? (
         <Pagination
           page={page}
-          totalPages={data.meta.totalPages}
+          totalPages={list.data.meta.totalPages}
           onPageChange={(next) => navigate({ page: next })}
         />
       ) : null}

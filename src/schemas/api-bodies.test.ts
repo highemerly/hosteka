@@ -22,6 +22,7 @@ import { HOMEPAGE_URL_MAX, SOCIAL_ACCOUNT_MAX, updateProfileBody } from './user'
 
 const base = {
   title: 'テスト日程調整',
+  hashtags: [],
   dateOptions: [{ startDate: '2026-09-20T10:00:00.000Z', endDate: null }],
   registrationDeadline: null,
   isAllowedForFediverse: true,

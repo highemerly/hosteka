@@ -18,6 +18,7 @@ type PreEventPayload = z.infer<typeof preEventPayloadSchema>
 export const PRE_EVENT_CHANGE_LABELS: Record<keyof PreEventPayload, string> = {
   title: '名前',
   description: '説明',
+  hashtags: 'ハッシュタグ',
   dateOptions: '候補日',
   registrationDeadline: '締切',
   location: '場所',

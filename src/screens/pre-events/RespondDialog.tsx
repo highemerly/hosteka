@@ -49,6 +49,7 @@ export function RespondDialog({
   const [votes, setVotes] = React.useState<Record<string, PreEventVote>>({})
   const [comment, setComment] = React.useState('')
   const [autoRegister, setAutoRegister] = React.useState(false)
+  const [agreed, setAgreed] = React.useState(false)
 
   /*
     開くたびに現在の回答へ戻す。閉じて開き直したときに前回の入力が
@@ -63,18 +64,23 @@ export function RespondDialog({
       setVotes(mine?.votes ?? {})
       setComment(mine?.comment ?? '')
       setAutoRegister(mine?.autoRegisterWhenPromoted ?? false)
+      // 同意済みの人はサーバーが同意を引き継ぐ（規約は回答が付くと書き換えられない）
+      setAgreed(mine?.termsAccepted ?? false)
     }
   }
 
   const unanswered = preEvent.dateOptions.filter((o) => !votes[o.id])
   const tooLong = comment.length > VALIDATION_LIMITS.PARTICIPANT_COMMENT
-  const canSubmit = unanswered.length === 0 && !tooLong
+  const hasTerms = Boolean(preEvent.terms)
+  const canSubmit = unanswered.length === 0 && (!hasTerms || agreed) && !tooLong
 
   const blockedReason = unanswered.length
     ? `${unanswered.length}日分の回答が残っています`
-    : tooLong
-      ? `コメントは${VALIDATION_LIMITS.PARTICIPANT_COMMENT}文字以内で入力してください`
-      : null
+    : hasTerms && !agreed
+      ? '参加規約への同意が必要です'
+      : tooLong
+        ? `コメントは${VALIDATION_LIMITS.PARTICIPANT_COMMENT}文字以内で入力してください`
+        : null
 
   const submit = () => {
     respond.mutate(
@@ -87,6 +93,7 @@ export function RespondDialog({
         })),
         comment: comment.trim() || undefined,
         autoRegisterWhenPromoted: preEvent.allowAutoRegistration ? autoRegister : undefined,
+        ...(hasTerms ? { termsAccepted: agreed } : {}),
       },
       {
         onSuccess: () => {
@@ -202,6 +209,12 @@ export function RespondDialog({
               <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-[var(--surface-subtle)] px-3 py-2">
                 <SafeMarkdown>{preEvent.terms}</SafeMarkdown>
               </div>
+              <ToggleField
+                label="参加規約に同意する"
+                description="同意しないと回答できません"
+                checked={agreed}
+                onCheckedChange={setAgreed}
+              />
             </div>
           ) : null}
         </div>

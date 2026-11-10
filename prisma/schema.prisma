@@ -193,6 +193,8 @@ model Event {
   options        EventOption[]
   reports        Report[]
   attendances    EventAttendance[]
+  /// このイベントの元になった日程調整
+  promotedFrom   PreEvent?          @relation("PreEventPromotion")
 
   @@index([isPublic, isDisabled, startDate])
   @@index([creatorId])
@@ -296,6 +298,8 @@ model PreEvent {
   id                      String    @id @default(cuid())
   title                   String    @db.VarChar(100)
   description             String?   @db.Text
+  /// JSON の配列（`events.hashtags` と同じ持ち方。イベントにするときに写る）
+  hashtags                String?   @db.Text
   location                String?   @db.VarChar(200)
   fee                     String?   @db.VarChar(200)
   relatedUrl              String?   @db.VarChar(200)
@@ -309,17 +313,26 @@ model PreEvent {
   isHighlighted           Boolean   @default(false)
   isDisabled              Boolean   @default(false)
   registrationDeadline    DateTime? @db.Timestamptz(3)
+  /// イベントにした時刻。**null でなければ閉じている**（回答も編集もできない）。
+  /// 閉じているかはこの列で見る。`promotedEventId` ではない — あちらはイベントが
+  /// 消えると null に戻るが、日程調整は再開しない
+  promotedAt              DateTime? @db.Timestamptz(3)
+  /// どの候補日でイベントにしたか。閉じたあとは候補日を編集できないので、外部キーにしない
+  promotedDateOptionId    String?
   createdAt               DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
 
   // Relations
-  creator        User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId      String
-  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  organizationId String?
-  dateOptions    PreEventDateOption[]
-  participants   PreEventParticipant[]
-  reports        Report[]
+  creator         User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId       String
+  organization    Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId  String?
+  /// この日程調整から作ったイベント。1つの日程調整からは1つだけ
+  promotedEvent   Event?                @relation("PreEventPromotion", fields: [promotedEventId], references: [id], onDelete: SetNull)
+  promotedEventId String?               @unique
+  dateOptions     PreEventDateOption[]
+  participants    PreEventParticipant[]
+  reports         Report[]
 
   @@index([isPublic, isDisabled, createdAt])
   @@index([creatorId])
@@ -348,6 +361,12 @@ model PreEventParticipant {
   status                   String // "available", "maybe", "unavailable"
   comment                  String?  @db.VarChar(300)
   autoRegisterWhenPromoted Boolean  @default(false)
+  /// 参加規約に同意した時刻。規約の無い日程調整では null。
+  /// **イベントにしたときの自動登録が、この同意をイベントの参加へ引き継ぐ**
+  /// （日程調整の規約は回答が付くと書き換えられず、イベントへそのまま写すので、
+  /// 同意した文とイベントの規約は同じもの）。この列ができる前の回答は null で、
+  /// 同意していないので自動登録しない
+  termsAcceptedAt          DateTime? @db.Timestamptz(3)
   createdAt                DateTime @default(now()) @db.Timestamptz(3)
   updatedAt                DateTime @updatedAt @db.Timestamptz(3)
 
@@ -484,6 +503,7 @@ model Notification {
   /// "participation_requested" | "participation_registered" | "participation_cancelled"
   /// | "participation_approved" | "participation_rejected" | "pre_event_answered"
   /// | "event_updated" | "event_cancelled" | "pre_event_updated" | "pre_event_deleted"
+  /// | "pre_event_promoted"
   /// | "organizer_assigned" | "organizer_unassigned" | "org_admin_added"
   kind        String
   /// "event" | "pre_event" | "org"

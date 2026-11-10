@@ -4,6 +4,7 @@ import { ApiError } from '@/server/http/errors'
 import { created } from '@/server/http/response'
 import { preEventPayloadSchema } from '@/schemas/pre-event'
 import { prisma } from '@/lib/prisma'
+import { hashtagsToColumn } from '@/lib/hashtags'
 
 import { enrichServersWithPlatform } from '@/lib/instance-platform'
 
@@ -25,6 +26,7 @@ export const POST = defineRoute({
     const {
       title,
       description,
+      hashtags,
       location,
       fee,
       relatedUrl,
@@ -72,6 +74,7 @@ export const POST = defineRoute({
       data: {
         title: title.trim(),
         description: description?.trim() || null,
+        hashtags: hashtagsToColumn(hashtags),
         location: location?.trim() || null,
         fee: fee?.trim() || null,
         relatedUrl: relatedUrl?.trim() || null,

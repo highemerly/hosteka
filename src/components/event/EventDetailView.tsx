@@ -28,6 +28,7 @@ import {
   Space,
   type DetailVariant,
 } from '@/components/attendable/DetailParts'
+import { hashtagPath } from '@/lib/hashtags'
 import { formatJstDateTime } from '@/lib/jst'
 import { formatSchedule } from '@/lib/event-schedule'
 import { userProfilePath } from '@/lib/user-handle'
@@ -299,7 +300,7 @@ export function EventDetailView({
           {event.hashtags.map((tag) => (
             <Tag
               key={tag}
-              href={preview ? undefined : `/events/hashtag/${encodeURIComponent(tag)}`}
+              href={preview ? undefined : hashtagPath(tag)}
             >
               #{tag}
             </Tag>

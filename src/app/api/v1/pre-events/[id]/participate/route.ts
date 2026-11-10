@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { extractServerNamesFromAllowedServers } from '@/lib/participation-utils'
 import { answerSignature } from '@/server/pre-events/answer-signature'
 import { notifyAfter, notifyPreEventAnswered } from '@/server/notifications/notify'
+import { assertNotPromoted } from '@/server/pre-events/promotion'
 
 // 日程調整の回答入力型
 interface DateOptionResponse {
@@ -67,7 +68,7 @@ export const POST = defineRoute({
   body: respondPreEventBody,
   handler: async ({ params, body, session }) => {
     const id = params.id
-    const { responses, comment, autoRegisterWhenPromoted } = body
+    const { responses, comment, autoRegisterWhenPromoted, termsAccepted } = body
 
     // 日程調整の存在確認
     const preEvent = await prisma.preEvent.findUnique({
@@ -84,6 +85,7 @@ export const POST = defineRoute({
     }
     await hideDisabledFromNonAdmins(preEvent.isDisabled, session, '日程調整が見つかりません')
     assertAnswersOpen(preEvent)
+    assertNotPromoted(preEvent)
 
     // プラットフォーム許可チェック
     const userPlatform = session.user.platform
@@ -148,8 +150,24 @@ export const POST = defineRoute({
         status: true,
         comment: true,
         autoRegisterWhenPromoted: true,
+        termsAcceptedAt: true,
       },
     })
+
+    /*
+      規約への同意。**○△×を問わず求める** — イベントは欠席に求めないが、
+      日程調整の回答は日ごとに混ざるので「規約に縛られない人」を1人単位で
+      決められない（`canEditPreEventTerms` と同じ考え方）。
+
+      **一度した同意は引き継ぐ。** 回答が付いた日程調整の規約は書き換え
+      られない（消すことだけはできる）ので、前に同意した文は今の規約と同じ。
+      回答は総入れ替えで保存するので、読んだ時刻をここで運ばないと消える。
+    */
+    const previousConsent = before.find((p) => p.termsAcceptedAt)?.termsAcceptedAt ?? null
+    if (preEvent.terms && !previousConsent && !termsAccepted) {
+      throw ApiError.validation('参加規約への同意が必要です')
+    }
+    const termsAcceptedAt = preEvent.terms ? (previousConsent ?? new Date()) : null
 
     // 既存の回答を削除
     await prisma.preEventParticipant.deleteMany({
@@ -167,7 +185,8 @@ export const POST = defineRoute({
         dateOptionId: response.dateOptionId,
         status: response.status,
         comment: comment?.trim() || null,
-        autoRegisterWhenPromoted: autoRegisterWhenPromoted && preEvent.allowAutoRegistration
+        autoRegisterWhenPromoted: autoRegisterWhenPromoted && preEvent.allowAutoRegistration,
+        termsAcceptedAt,
       }))
     })
 
@@ -235,6 +254,7 @@ export const DELETE = defineRoute({
     }
     await hideDisabledFromNonAdmins(preEvent.isDisabled, session, '日程調整が見つかりません')
     assertAnswersOpen(preEvent)
+    assertNotPromoted(preEvent)
 
     // 既存の回答を削除
     await prisma.preEventParticipant.deleteMany({

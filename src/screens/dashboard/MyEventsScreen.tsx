@@ -34,7 +34,7 @@ const PATH = '/dashboard/my-events'
 
 /**
  * 1ページの件数。カードは 1 / 2 / 3 列に並ぶので 6 の倍数にする
- * （HashtagEventsScreen と同じ理由）。
+ * （HashtagScreen と同じ理由）。
  */
 const PER_PAGE_NARROW = 6
 const PER_PAGE_WIDE = 12

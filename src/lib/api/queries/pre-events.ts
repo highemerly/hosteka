@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/lib/api/client'
+import { eventKeys } from '@/lib/api/queries/events'
 import type { PreEventSectionsDto } from '@/app/api/v1/pre-events/sections/route'
 import type {
   PreEventContactDto,
@@ -11,6 +12,7 @@ import type {
 } from '@/server/serializers/pre-event'
 import type { PreEventPayload } from '@/screens/pre-events/pre-event-payload'
 import type { MyPreEventsQuery } from '@/schemas/pre-event'
+import type { EventFormOutput } from '@/schemas/event'
 import type { PreEventListItemDto } from '@/server/serializers/pre-event'
 
 /**
@@ -22,6 +24,22 @@ export const preEventKeys = {
   detail: (id: string) => ['pre-events', 'detail', id] as const,
   sections: () => ['pre-events', 'sections'] as const,
   mine: (params: MyPreEventsParams) => ['pre-events', 'mine', params] as const,
+  hashtag: (tag: string, page: number, perPage: number) =>
+    ['pre-events', 'hashtag', tag, page, perPage] as const,
+}
+
+/** ハッシュタグ別の日程調整一覧（受付中のものだけ）。`enabled` が偽なら引かない */
+export function useHashtagPreEvents(tag: string, page: number, perPage: number, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: preEventKeys.hashtag(tag, page, perPage),
+    queryFn: () =>
+      api.list<PreEventListItemDto>(
+        `/api/v1/pre-events/hashtag/${encodeURIComponent(tag)}?page=${page}&perPage=${perPage}`
+      ),
+    // ページを切り替えたときに一瞬空へ落とさない
+    placeholderData: (prev) => prev,
+  })
 }
 
 export type MyPreEventsParams = Pick<MyPreEventsQuery, 'role' | 'scope' | 'page' | 'perPage'>
@@ -69,6 +87,24 @@ export function useCreatePreEvent() {
     onSuccess: () => {
       // どのセクションに出るかはサーバーが決めるので、まとめて捨てる
       queryClient.invalidateQueries({ queryKey: preEventKeys.all })
+    },
+  })
+}
+
+/**
+ * 日程調整を候補日の1つでイベントにする。
+ *
+ * イベントの一覧にも日程調整の一覧にも出入りがあるので、両方を捨てる。
+ */
+export function usePromotePreEvent(id: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { dateOptionId: string; event: EventFormOutput }) =>
+      api.post<{ id: string; registeredCount: number }>(`/api/v1/pre-events/${id}/promote`, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preEventKeys.all })
+      queryClient.invalidateQueries({ queryKey: eventKeys.all })
     },
   })
 }

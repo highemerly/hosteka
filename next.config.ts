@@ -176,6 +176,15 @@ const nextConfig: NextConfig = {
         destination: '/events',
         permanent: true,
       },
+      /*
+        タグのページはイベントと日程調整の両方を出すようになり、イベントの下から
+        外へ移した。SNS に貼られた旧URLが切れないよう送る（クエリは引き継がれる）。
+      */
+      {
+        source: '/events/hashtag/:hashtag',
+        destination: '/hashtags/:hashtag',
+        permanent: true,
+      },
       {
         source: '/dashboard/pre-events',
         destination: '/pre-events',

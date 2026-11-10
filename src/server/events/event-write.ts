@@ -1,3 +1,4 @@
+import { hashtagsToColumn } from '@/lib/hashtags'
 import type { EventFormOutput } from '@/schemas/event'
 
 /**
@@ -55,8 +56,7 @@ export function eventColumnsFromForm(body: EventFormOutput): EventColumns {
   return {
     title: body.title,
     description: body.description || null,
-    // 配列のまま持てない列なので JSON にする。空は null（「無し」と「空配列」を分けない）
-    hashtags: body.hashtags && body.hashtags.length > 0 ? JSON.stringify(body.hashtags) : null,
+    hashtags: hashtagsToColumn(body.hashtags),
     startDate: new Date(body.startDate),
     startTime: body.startTime || null,
     hasStartTime: hasTime(body.startTime),

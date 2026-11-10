@@ -10,6 +10,8 @@ import { PRE_EVENT_CHANGE_LABELS } from './pre-event-notify-fields'
 export type PreEventChangeInput = {
   title: string
   description: string | null
+  /** 保存形（JSON）のまま比べる。**並び順も変更のうち**（画面にその順で出る） */
+  hashtags: string | null
   location: string | null
   fee: string | null
   relatedUrl: string | null
@@ -32,6 +34,7 @@ export type PreEventChangeInput = {
 const FIELD_OF: Record<keyof PreEventChangeInput, keyof typeof PRE_EVENT_CHANGE_LABELS> = {
   title: 'title',
   description: 'description',
+  hashtags: 'hashtags',
   location: 'location',
   fee: 'fee',
   relatedUrl: 'relatedUrl',

@@ -10,6 +10,7 @@ import { PRE_EVENT_CHANGE_LABELS } from './pre-event-notify-fields'
 const BASE: PreEventChangeInput = {
   title: '歓迎会の日程',
   description: '本文',
+  hashtags: '["花見"]',
   location: '上野公園',
   fee: '2000円',
   relatedUrl: null,
@@ -85,6 +86,18 @@ describe('日程調整の編集で何が変わったか', () => {
     expect(notifiablePreEventChanges(input(), input({ description: '本文（修正）' }))).toEqual([
       '説明',
     ])
+  })
+
+  it('ハッシュタグは足しても、並べ替えても知らせる', () => {
+    expect(notifiablePreEventChanges(input(), input({ hashtags: '["花見","上野"]' }))).toEqual([
+      'ハッシュタグ',
+    ])
+    expect(
+      notifiablePreEventChanges(
+        input({ hashtags: '["花見","上野"]' }),
+        input({ hashtags: '["上野","花見"]' })
+      )
+    ).toEqual(['ハッシュタグ'])
   })
 
   it('締切・場所・会費', () => {

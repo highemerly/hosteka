@@ -75,6 +75,7 @@ export default function PreEventDetailScreen({ preEventId }: { preEventId: strin
   const stateInput = {
     dateOptions: preEvent.dateOptions,
     registrationDeadline: preEvent.registrationDeadline,
+    promotion: preEvent.promotion,
     viewer: preEvent.viewer,
   }
   const state = resolvePreEventActionState(stateInput)

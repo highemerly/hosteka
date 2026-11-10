@@ -19,6 +19,7 @@ import { toDateOptionDraft, toJstDate, toJstTime } from './pre-event-payload'
 export const EMPTY_PRE_EVENT_FORM: PreEventFormValues = {
   title: '',
   description: '',
+  hashtags: [],
   location: '',
   fee: '',
   terms: '',
@@ -41,6 +42,7 @@ export function toPreEventFormValues(preEvent: PreEventDetailDto): PreEventFormV
     ...EMPTY_PRE_EVENT_FORM,
     title: preEvent.title,
     description: preEvent.description ?? '',
+    hashtags: preEvent.hashtags,
     location: preEvent.location ?? '',
     fee: preEvent.fee ?? '',
     terms: preEvent.terms ?? '',

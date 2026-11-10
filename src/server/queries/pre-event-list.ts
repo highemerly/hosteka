@@ -14,6 +14,7 @@ import { USER_PUBLIC_SELECT } from '@/lib/select-presets'
 export const PRE_EVENT_LIST_SELECT = {
   id: true,
   title: true,
+  hashtags: true,
   location: true,
   fee: true,
   registrationDeadline: true,
@@ -41,3 +42,14 @@ export const PUBLIC_PRE_EVENT_CONDITIONS: Prisma.PreEventWhereInput[] = [
   { isPublic: true },
   { isHighlighted: true },
 ]
+
+/**
+ * まだ回答を受け付けている日程調整の条件。
+ *
+ * 「終わっていない」は**未来の候補日が1つでも残っていること**
+ * （日程調整には開催日が無い）。**イベントにしたものも外す** — もう回答
+ * できないし、行き先のイベントがイベントの一覧に出ている。
+ */
+export function openPreEventConditions(now: Date): Prisma.PreEventWhereInput[] {
+  return [{ promotedAt: null }, { dateOptions: { some: { startDate: { gte: now } } } }]
+}

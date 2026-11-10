@@ -28,6 +28,7 @@ const REASONS: { pattern: RegExp; action: string }[] = [
     後ろに置く。** `/events/create` が「イベントに参加登録する」に
     化けると、押した操作と説明が食い違う。
   */
+  // 旧URL（`/hashtags/…` へ送られる）。戻り先に残っていることがある
   { pattern: /^\/events\/hashtag\//, action: '' },
   { pattern: /^\/events\/[^/]+$/, action: 'イベントに参加登録する' },
   { pattern: /^\/pre-events\/[^/]+$/, action: '日程調整に回答する' },

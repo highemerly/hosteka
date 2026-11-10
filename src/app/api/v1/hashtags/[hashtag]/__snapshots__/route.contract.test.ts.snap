@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/hashtags/[hashtag] > 切り替えごとの件数を返す 1`] = `
+{
+  "body": {
+    "data": {
+      "counts": {
+        "past": 9,
+        "pre-events": 2,
+        "upcoming": 4,
+      },
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

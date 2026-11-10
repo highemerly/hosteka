@@ -16,6 +16,7 @@ import { ConditionLink } from '@/components/event/ConditionLink'
 import { EventInfoRow, UserAvatar } from '@/components/event/EventInfoRow'
 import { PlatformCondition } from '@/components/event/PlatformCondition'
 import { ShareBar } from '@/components/event/ShareBar'
+import { Tag } from '@/components/event/Tag'
 import { buildAnypostContactUrl } from '@/components/event/share-targets'
 import {
   ContactAction,
@@ -25,6 +26,7 @@ import {
   Space,
 } from '@/components/attendable/DetailParts'
 import { resolveLocation } from '@/components/event/location'
+import { hashtagPath } from '@/lib/hashtags'
 import { formatJstDateTime } from '@/lib/jst'
 
 import { DateOptionList } from './DateOptionList'
@@ -77,6 +79,9 @@ export function PreEventDetailView({
 
   /** 幹事から見ているか。編集の入口の出し分けに使う */
   const isHost = state.kind === 'host'
+  /** イベントにしたか。したら編集できない（サーバーが断る） */
+  const promoted = preEvent.promotion !== null
+  const canPromote = preEvent.viewer.canDelete && !promoted
 
   const contactUrl = buildAnypostContactUrl({
     url: typeof window === 'undefined' ? '' : window.location.href,
@@ -133,7 +138,7 @@ export function PreEventDetailView({
           直しに来た人がまず探すのは題名のそばなので、そこに置く。
           **狭い画面では出さない** — 題名の横幅を削る。幹事メニューから行ける。
         */}
-        {isHost ? (
+        {isHost && !promoted ? (
           <Button
             variant="default"
             size="icon-sm"
@@ -149,6 +154,16 @@ export function PreEventDetailView({
         ) : null}
       </div>
 
+      {preEvent.hashtags.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {preEvent.hashtags.map((tag) => (
+            <Tag key={tag} href={hashtagPath(tag)}>
+              #{tag}
+            </Tag>
+          ))}
+        </div>
+      ) : null}
+
       {/* 詳細を読む前に回答を決められる人を待たせない。
           幹事には回答者用の操作と幹事メニューが2つ並ぶ。
           **狭い画面でも1行に並べる**（イベント詳細と同じ。`HOST_ACTION_WIDTH`
@@ -158,6 +173,8 @@ export function PreEventDetailView({
           preEventId={preEvent.id}
           state={state}
           selfState={selfState}
+          promoted={promoted}
+          canPromote={canPromote}
           onRespond={onRespond}
           onDelete={onDelete}
         />
@@ -185,7 +202,10 @@ export function PreEventDetailView({
 
       <section>
         <h2 className="mb-3 text-base font-bold text-foreground">候補日</h2>
-        <DateOptionList options={preEvent.dateOptions} />
+        <DateOptionList
+          options={preEvent.dateOptions}
+          chosenId={preEvent.promotion?.dateOptionId ?? null}
+        />
       </section>
 
       <Space />
@@ -249,6 +269,8 @@ export function PreEventDetailView({
             selfState={selfState}
             size="sm"
             widthClassName="max-w-full max-sm:grow"
+            promoted={promoted}
+            canPromote={canPromote}
             onRespond={onRespond}
             onDelete={onDelete}
           />

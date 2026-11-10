@@ -47,6 +47,8 @@ import {
 } from '@/lib/api/queries/pre-events'
 import { useMyOrgs } from '@/lib/api/queries/orgs'
 import { preEventFormSchema, type PreEventFormValues } from '@/schemas/pre-event'
+import { HASHTAG_MAX } from '@/schemas/event'
+import { COMMON_HASHTAGS, TagsInput } from '@/components/attendable/fields/TagsInput'
 import { VALIDATION_LIMITS } from '@/schemas/limits'
 
 import {
@@ -73,6 +75,7 @@ const FIELD_LABELS: { name: string; label: string }[] = [
   { name: 'location', label: '場所' },
   { name: 'fee', label: '参加費' },
   { name: 'description', label: '詳細説明文' },
+  { name: 'hashtags', label: 'ハッシュタグ' },
   { name: 'registrationDeadlineDate', label: '回答締切' },
   { name: 'terms', label: '参加規約' },
   { name: 'isAllowedForFediverse', label: '回答に利用できるプラットフォーム' },
@@ -214,6 +217,7 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
   const twitter = useWatch({ control, name: 'isAllowedForTwitter' })
   const title = useWatch({ control, name: 'title' }) ?? ''
   const description = useWatch({ control, name: 'description' }) ?? ''
+  const hashtags = useWatch({ control, name: 'hashtags' }) ?? []
   const terms = useWatch({ control, name: 'terms' }) ?? ''
 
   /*
@@ -531,6 +535,26 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
             />
           </Field>
 
+          <Field
+            label="ハッシュタグ"
+            htmlFor="hashtags"
+            error={errors.hashtags?.message}
+            hint={`${hashtags.length} / ${HASHTAG_MAX}`}
+          >
+            <Controller
+              control={control}
+              name="hashtags"
+              render={({ field }) => (
+                <TagsInput
+                  id="hashtags"
+                  value={field.value}
+                  onChange={field.onChange}
+                  max={HASHTAG_MAX}
+                  suggestions={COMMON_HASHTAGS}
+                />
+              )}
+            />
+          </Field>
         </FormSection>
 
         {/*

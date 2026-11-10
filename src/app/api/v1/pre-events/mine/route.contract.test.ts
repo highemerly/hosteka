@@ -85,20 +85,22 @@ describe('GET /api/v1/pre-events/mine', () => {
     })
   })
 
-  it('終わったかどうかは候補日で決める。日程調整に開催日は無い', async () => {
+  it('終わったかどうかは候補日で決める。日程調整に開催日は無い。イベントにしたものは終わった側', async () => {
     await GET(makeRequest('/api/v1/pre-events/mine'))
     const upcoming = findCondition((c) => 'dateOptions' in c) as {
+      promotedAt: null
       dateOptions: { some: { startDate: { gte: Date } } }
     }
     expect(upcoming.dateOptions.some.startDate.gte).toBeInstanceOf(Date)
+    expect(upcoming.promotedAt).toBeNull()
 
     resetPrismaMock()
     prismaMock.preEvent.count.mockResolvedValue(0)
     prismaMock.preEvent.findMany.mockResolvedValue([])
     await GET(makeRequest('/api/v1/pre-events/mine?scope=past'))
-    // 「未来の候補日が1つも無い」が終了。NOT を外すと終了だけが出せない
+    // 「これから」の裏返しが終了。NOT を外すと終了だけが出せない
     expect(findCondition((c) => 'NOT' in c)).toEqual({
-      NOT: { dateOptions: { some: { startDate: expect.any(Object) } } },
+      NOT: { promotedAt: null, dateOptions: { some: { startDate: expect.any(Object) } } },
     })
   })
 

@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import {
+  ArrowRight,
+  CalendarCheck,
   Check,
   ChevronDown,
   Crown,
@@ -48,11 +50,20 @@ export function PreEventAction({
   restriction,
   widthClassName,
   size = 'default',
+  promoted = false,
+  canPromote = false,
   onRespond,
   onDelete,
 }: {
   /** 幹事メニューの各項目のリンク先を組み立てるのに使う */
   preEventId: string
+  /** イベントにしたか。したら幹事メニューから編集を外す（サーバーが断る） */
+  promoted?: boolean
+  /**
+   * 幹事メニューに「イベントにする」を出すか。**削除と同じ人だけ**
+   * （作成者と所属グループの管理責任者。`requirePreEventOwner`）
+   */
+  canPromote?: boolean
   state: PreEventActionState
   /**
    * 幹事自身の回答状態。
@@ -118,6 +129,8 @@ export function PreEventAction({
           preEventId={preEventId}
           wide={hostWide}
           size={size}
+          promoted={promoted}
+          canPromote={canPromote}
           onDelete={onDelete}
         />
       </>
@@ -196,6 +209,24 @@ function RespondentAction({
         </Button>
       )
 
+    case 'promoted':
+      /*
+        **行き先を出す。** 決まった日程調整に来た人が次にすることは、
+        イベントのページで参加登録すること（自動で登録された人は確かめること）。
+      */
+      return state.eventId ? (
+        <Button size={size} variant="primary" className={wide} asChild>
+          <Link href={`/events/${state.eventId}`}>
+            イベントのページへ
+            <ArrowRight className={iconSize} data-icon="inline-end" />
+          </Link>
+        </Button>
+      ) : (
+        <Button size={size} variant="default" className={wide} disabled>
+          イベントになりました
+        </Button>
+      )
+
     case 'ineligible':
       return (
         <IneligibleAction
@@ -213,11 +244,15 @@ function HostMenu({
   preEventId,
   wide,
   size,
+  promoted,
+  canPromote,
   onDelete,
 }: {
   preEventId: string
   wide: string
   size: 'default' | 'sm'
+  promoted: boolean
+  canPromote: boolean
   onDelete?: () => void
 }) {
   const iconSize = size === 'sm' ? 'size-4' : 'size-5'
@@ -237,12 +272,27 @@ function HostMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuItem asChild>
-          <Link href={`/pre-events/${preEventId}/edit`}>
-            <Pencil />
-            日程調整を編集
-          </Link>
-        </DropdownMenuItem>
+        {/* 日程調整の行き着く先。いちばん上に置く */}
+        {canPromote ? (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href={`/pre-events/${preEventId}/promote`}>
+                <CalendarCheck />
+                日程を決めてイベントにする
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        {/* イベントにしたあとは編集できない（サーバーが断る） */}
+        {!promoted ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/pre-events/${preEventId}/edit`}>
+              <Pencil />
+              日程調整を編集
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild>
           <Link href={`/pre-events/${preEventId}/contact`}>
             <MessageSquare />

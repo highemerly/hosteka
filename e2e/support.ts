@@ -133,6 +133,7 @@ export async function createPreEvent(page: Page, fields: { title: string; descri
   const res = await call<{ data: { id: string } }>(page, 'POST', '/api/v1/pre-events', {
     title: fields.title,
     description: fields.description ?? '',
+    hashtags: [],
     location: '',
     fee: '',
     terms: '',
