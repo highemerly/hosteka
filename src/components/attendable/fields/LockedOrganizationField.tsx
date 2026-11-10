@@ -9,8 +9,8 @@ export function LockedOrganizationField({
   note = '変えられるのは作成者だけです',
 }: {
   organization: { name: string } | null
-  /** なぜ変えられないか */
-  note?: string
+  /** なぜ変えられないか。null なら出さない */
+  note?: string | null
 }) {
   return (
     <div className="space-y-2">
@@ -20,7 +20,7 @@ export function LockedOrganizationField({
           {organization ? organization.name : '作成者'}
         </span>
       </div>
-      <p className="text-xs text-muted-foreground">{note}</p>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
     </div>
   )
 }

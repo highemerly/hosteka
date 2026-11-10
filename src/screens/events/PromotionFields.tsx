@@ -77,28 +77,27 @@ export function PromotionDateField({
  * 自動登録はその同意をイベントへ引き継ぐ。無い規約を足すこともできない。
  */
 export function PromotionTermsField({ terms }: { terms: string | null }) {
+  if (!terms) {
+    return (
+      <Field label="参加規約" htmlFor="terms">
+        <p id="terms" className="text-sm text-muted-foreground">
+          日程調整に規約が設定されていなかったため、設定できません
+        </p>
+      </Field>
+    )
+  }
   return (
     <Field
       label="参加規約"
       htmlFor="terms"
-      description={
-        terms
-          ? '回答した人が同意した規約なので、変更できません。'
-          : '日程調整に規約が無いので、設定できません。'
-      }
+      description="回答した人が同意した規約なので、変更できません。"
     >
-      {terms ? (
-        <div
-          id="terms"
-          className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"
-        >
-          <SafeMarkdown>{terms}</SafeMarkdown>
-        </div>
-      ) : (
-        <p id="terms" className="text-sm text-muted-foreground">
-          設定していません
-        </p>
-      )}
+      <div
+        id="terms"
+        className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"
+      >
+        <SafeMarkdown>{terms}</SafeMarkdown>
+      </div>
     </Field>
   )
 }
@@ -108,7 +107,6 @@ export function PromotionTermsField({ terms }: { terms: string | null }) {
  * 回答した人はこの条件で答えている。広げたければ作ったあとに編集する。
  */
 export function PromotionPlatformsField({ preEvent }: { preEvent: PreEventDetailDto }) {
-
   return (
     <div className="space-y-2" id="platforms">
       <span className="block text-base font-medium text-foreground">
@@ -117,9 +115,6 @@ export function PromotionPlatformsField({ preEvent }: { preEvent: PreEventDetail
       <div className="rounded-lg border border-border bg-[var(--surface-subtle)] p-3">
         <AllowedAccountTree r={resolvePlatformRestriction(preEvent)} />
       </div>
-      <p className="text-xs text-muted-foreground">
-        日程調整と同じです。広げるときは、作ったあとに編集してください。
-      </p>
     </div>
   )
 }

@@ -1161,7 +1161,7 @@ export default function EventFormScreen({
           {promoting ? (
             <LockedOrganizationField
               organization={source?.organization ?? null}
-              note="日程調整と同じ名義で作ります"
+              note={null}
             />
           ) : existing && !existing.viewer.canChangeOrganization ? (
             <LockedOrganizationField organization={existing.organization} />
