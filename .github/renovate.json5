@@ -9,6 +9,15 @@
   labels: ['dependencies'],
   // PR を github.com/pulls の「Assigned to you」にまとめる（いくつものリポジトリから来るので見落とさない）
   assignees: ['highemerly'],
+  // lockfile は npm 11 で更新させる。npm 12 は既定が allow-remote=none になり、--package-lock-only の
+  // ときだけ bundleDependencies を持つパッケージ（tailwind の @tailwindcss/oxide-wasm32-wasi）の
+  // レジストリの tarball を remote と誤判定して EALLOWREMOTE で落ちる（npm/cli#9800）。Renovate は
+  // lockfile を更新できず package.json だけの PR を出し、CI の npm ci が全部落ちる（#61 で実例）。
+  // npm 10.9.2 も vitest の peer 解決で lockfile 更新がクラッシュする（arborist の `edgesOut`）。
+  // allow-remote=all で打ち消すより、バグの無い版で動かす。#9800 の修正が入った npm 12 が出たら上限を外す。
+  constraints: {
+    npm: '^11',
+  },
   // 間接依存（lockfile だけにある版）も週1で更新する。
   lockFileMaintenance: {
     enabled: true,
