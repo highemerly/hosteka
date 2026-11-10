@@ -1,3 +1,5 @@
+import type { HashtagScope } from '@/schemas/hashtag'
+
 /**
  * ハッシュタグの列。**イベントと日程調整で同じ持ち方をする**（JSON 文字列の配列）。
  *
@@ -21,7 +23,11 @@ export function hashtagsFromColumn(value: string | null): string[] {
   }
 }
 
-/** タグのページ。イベントと日程調整の両方を出す（`app/hashtags/[hashtag]`） */
-export function hashtagPath(tag: string): string {
-  return `/hashtags/${encodeURIComponent(tag)}`
+/**
+ * タグのページ。イベントと日程調整の両方を出す（`app/hashtags/[hashtag]`）。
+ * 既定の切り替え（`upcoming`）は URL に書かない
+ */
+export function hashtagPath(tag: string, scope?: HashtagScope): string {
+  const path = `/hashtags/${encodeURIComponent(tag)}`
+  return scope && scope !== 'upcoming' ? `${path}?scope=${scope}` : path
 }

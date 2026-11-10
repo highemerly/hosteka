@@ -2,15 +2,13 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { CalendarPlus, Flame, Hash, Search, Server, Sparkles, Timer } from 'lucide-react'
+import { CalendarPlus, Flame, Server, Sparkles, Timer } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { HashtagSearchForm } from '@/components/common/HashtagSearchForm'
 import { EventCard } from '@/components/event/EventCard'
 import { useEventSections } from '@/lib/api/queries/events'
-import { hashtagPath } from '@/lib/hashtags'
 import type { EventListItemDto } from '@/server/serializers/event'
 
 function SectionSkeleton() {
@@ -71,16 +69,7 @@ function Section({
  * そのまま待ち時間になっていた。
  */
 export default function EventsListScreen() {
-  const router = useRouter()
-  const [hashtag, setHashtag] = React.useState('')
-
   const { data, isPending, error } = useEventSections()
-
-  const submitHashtag = (event: React.FormEvent) => {
-    event.preventDefault()
-    const tag = hashtag.trim().replace(/^#/, '')
-    if (tag) router.push(hashtagPath(tag))
-  }
 
   const isEmpty =
     data != null &&
@@ -104,21 +93,7 @@ export default function EventsListScreen() {
       </div>
 
       <div className="mt-5">
-        <form onSubmit={submitHashtag} className="flex items-center gap-2 sm:max-w-md">
-          <div className="relative min-w-0 flex-1">
-            <Hash className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={hashtag}
-              onChange={(e) => setHashtag(e.target.value)}
-              placeholder="ハッシュタグで探す"
-              aria-label="ハッシュタグで探す"
-              className="h-12 pl-9 text-base"
-            />
-          </div>
-          <Button type="submit" variant="default" size="icon" aria-label="検索">
-            <Search className="size-4" />
-          </Button>
-        </form>
+        <HashtagSearchForm />
       </div>
 
       <div className="mt-6">
