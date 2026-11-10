@@ -33,6 +33,7 @@ export function toEventFormValuesFromPreEvent(
     ...EMPTY_EVENT_FORM,
     title: preEvent.title,
     description: preEvent.description ?? '',
+    hashtags: preEvent.hashtags,
     location: preEvent.location ?? '',
     fee: preEvent.fee ?? '',
     relatedUrl: preEvent.relatedUrl ?? '',
@@ -56,6 +57,7 @@ type Mapping =
 export const PRE_EVENT_TO_EVENT: Record<keyof PreEventDetailDto, Mapping> = {
   title: { carried: true },
   description: { carried: true },
+  hashtags: { carried: true },
   location: { carried: true },
   fee: { carried: true },
   relatedUrl: { carried: true },

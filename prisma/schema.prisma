@@ -298,6 +298,8 @@ model PreEvent {
   id                      String    @id @default(cuid())
   title                   String    @db.VarChar(100)
   description             String?   @db.Text
+  /// JSON の配列（`events.hashtags` と同じ持ち方。イベントにするときに写る）
+  hashtags                String?   @db.Text
   location                String?   @db.VarChar(200)
   fee                     String?   @db.VarChar(200)
   relatedUrl              String?   @db.VarChar(200)

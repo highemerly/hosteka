@@ -31,6 +31,7 @@ exports[`GET /api/v1/dashboard > アカウント・近いイベント・最近�
             },
           ],
           "fee": null,
+          "hashtags": [],
           "id": "pre_1",
           "location": null,
           "organization": null,

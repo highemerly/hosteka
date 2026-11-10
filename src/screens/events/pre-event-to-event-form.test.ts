@@ -23,6 +23,7 @@ const FULL: PreEventDetailDto = {
   id: 'pre_1',
   title: '忘年会',
   description: '## 会場\n駅前',
+  hashtags: ['忘年会'],
   location: '東京都千代田区千代田1-1',
   fee: '3,000円',
   relatedUrl: 'https://example.com',
@@ -84,6 +85,7 @@ describe('日程調整からイベントの入力欄へ', () => {
     expect(values).toMatchObject({
       title: '忘年会',
       description: '## 会場\n駅前',
+      hashtags: ['忘年会'],
       location: '東京都千代田区千代田1-1',
       fee: '3,000円',
       relatedUrl: 'https://example.com',
@@ -127,6 +129,8 @@ describe('日程調整からイベントの入力欄へ', () => {
             return FULL.allowedServers[0].server
           case 'dateOptions':
             return '2026-12-12'
+          case 'hashtags':
+            return FULL.hashtags[0]
           default:
             return FULL[key]
         }

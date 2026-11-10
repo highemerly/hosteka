@@ -37,8 +37,9 @@ export type Attendable = {
   href: string
   schedule: AttendableSchedule
   location: string | null
-  /** ハッシュタグ。日程調整は持たない */
+  /** ハッシュタグ */
   tags: string[]
+  /** タグを押した先。無ければリンクにしない */
   tagHref?: (tag: string) => string
   people: {
     count: number
@@ -93,7 +94,11 @@ export function toPreEventAttendable(preEvent: PreEventListItemDto): Attendable 
     href: `/pre-events/${preEvent.id}`,
     schedule: { kind: 'candidates', options: preEvent.dateOptions },
     location: preEvent.location,
-    tags: [],
+    /*
+      **リンクにしない。** タグで引く画面（`/events/hashtag/…`）はイベントしか
+      出さないので、押しても今見ている日程調整は出てこない
+    */
+    tags: preEvent.hashtags,
     people: {
       count: preEvent.respondentCount,
       // 日程調整に定員は無い。**回答が集まるほど良い**ので分母を出さない

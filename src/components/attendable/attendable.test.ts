@@ -34,6 +34,7 @@ const EVENT: EventListItemDto = {
 const PRE_EVENT: PreEventListItemDto = {
   id: 'pre_1',
   title: '日程を決める',
+  hashtags: ['ボドゲ'],
   dateOptions: [
     { id: 'd2', startDate: '2026-09-20T10:00:00.000Z', endDate: null },
     { id: 'd1', startDate: '2026-09-14T10:00:00.000Z', endDate: null },
@@ -97,8 +98,10 @@ describe('toPreEventAttendable', () => {
     })
   })
 
-  it('ハッシュタグを持たない', () => {
-    expect(toPreEventAttendable(PRE_EVENT).tags).toEqual([])
+  it('ハッシュタグは出すが、リンクにしない（タグで引く画面はイベントしか出さない）', () => {
+    const item = toPreEventAttendable(PRE_EVENT)
+    expect(item.tags).toEqual(['ボドゲ'])
+    expect(item.tagHref).toBeUndefined()
   })
 })
 

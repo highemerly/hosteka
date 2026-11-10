@@ -180,6 +180,11 @@ const timeInput = z
 /** ハッシュタグの個数の上限。旧フォームと同じ */
 export const HASHTAG_MAX = 10
 
+/** ハッシュタグ。**日程調整も同じ規則**（イベントにするときにそのまま写る） */
+export const hashtagsSchema = z
+  .array(z.string().trim().min(1))
+  .max(HASHTAG_MAX, `ハッシュタグは最大${HASHTAG_MAX}個まで設定できます`)
+
 export const eventOptionSchema = z.object({
   name: z
     .string()
@@ -267,9 +272,7 @@ export const eventFormSchema = z
         `イベント名は${VALIDATION_LIMITS.EVENT_TITLE}文字以内で入力してください`
       ),
     description: optionalText(VALIDATION_LIMITS.DESCRIPTION, '説明'),
-    hashtags: z
-      .array(z.string().trim().min(1))
-      .max(HASHTAG_MAX, `ハッシュタグは最大${HASHTAG_MAX}個まで設定できます`),
+    hashtags: hashtagsSchema,
 
     startDate: dateInput,
     startTime: timeInput,

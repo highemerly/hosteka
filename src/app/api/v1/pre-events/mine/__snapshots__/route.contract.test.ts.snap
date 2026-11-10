@@ -21,6 +21,7 @@ exports[`GET /api/v1/pre-events/mine > 一覧とページ情報を返す 1`] = `
           },
         ],
         "fee": null,
+        "hashtags": [],
         "id": "pre_1",
         "location": "渋谷",
         "organization": null,

@@ -18,6 +18,7 @@ export const PRE_EVENT_DETAIL_SELECT = {
   id: true,
   title: true,
   description: true,
+  hashtags: true,
   location: true,
   fee: true,
   relatedUrl: true,

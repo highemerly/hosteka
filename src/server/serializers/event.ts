@@ -3,6 +3,7 @@ import 'server-only'
 import { serializeUser, type PublicUserDto } from './user'
 import type { OptionResponseType } from '@/schemas/event'
 import { parseAllowedServers, type AllowedServer } from '@/lib/allowed-servers'
+import { hashtagsFromColumn } from '@/lib/hashtags'
 import { canChangeOrganization } from '@/lib/status-transition'
 import { composeDateTime, composeDeadline } from '@/lib/event-datetime'
 
@@ -121,17 +122,6 @@ export type EventDetailDto = {
   viewer: EventViewerDto
   createdAt: string
   updatedAt: string
-}
-
-/** JSON文字列で保存されている配列を安全に読む。壊れていても落とさない */
-function parseJsonArray(value: string | null): string[] {
-  if (!value) return []
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'string') : []
-  } catch {
-    return []
-  }
 }
 
 type EventRow = {
@@ -344,7 +334,7 @@ export function serializeEventDetail(
     id: event.id,
     title: event.title,
     description: event.description,
-    hashtags: parseJsonArray(event.hashtags),
+    hashtags: hashtagsFromColumn(event.hashtags),
     startDate: composeDateTime(event.startDate, event.startTime, event.hasStartTime),
     endDate: event.endDate
       ? composeDateTime(event.endDate, event.endTime, event.hasEndTime)
@@ -459,7 +449,7 @@ export function serializeEventListItem(event: EventListSource): EventListItemDto
   return {
     id: event.id,
     title: event.title,
-    hashtags: parseJsonArray(event.hashtags),
+    hashtags: hashtagsFromColumn(event.hashtags),
     startDate: composeDateTime(event.startDate, event.startTime, event.hasStartTime),
     endDate: event.endDate
       ? composeDateTime(event.endDate, event.endTime, event.hasEndTime)

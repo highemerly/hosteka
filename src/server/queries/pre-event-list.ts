@@ -14,6 +14,7 @@ import { USER_PUBLIC_SELECT } from '@/lib/select-presets'
 export const PRE_EVENT_LIST_SELECT = {
   id: true,
   title: true,
+  hashtags: true,
   location: true,
   fee: true,
   registrationDeadline: true,

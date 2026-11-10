@@ -67,6 +67,7 @@ function preEventRow(overrides: Record<string, unknown> = {}) {
 
 const BODY = {
   title: '歓迎会の日程',
+  hashtags: [],
   terms: '### 新しい規約\n- 遅刻厳禁',
   dateOptions: [{ startDate: '2026-09-20T10:00:00.000Z', endDate: null }],
   registrationDeadline: null,

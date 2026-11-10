@@ -35,6 +35,7 @@ describe('POST /api/v1/pre-events の応答', () => {
         body: {
           title: 'テスト日程調整',
           description: '',
+          hashtags: [],
           location: '',
           fee: '',
           terms: '',

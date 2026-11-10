@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { VALIDATION_LIMITS } from './limits'
 import { allowedFediverseServersSchema } from './allowed-servers'
-import { eventFormSchema } from './event'
+import { eventFormSchema, hashtagsSchema } from './event'
 
 /**
  * 自分の日程調整一覧（`/dashboard/my-pre-events`）のクエリ。
@@ -146,6 +146,7 @@ export const preEventFormSchema = z
         `タイトルは${VALIDATION_LIMITS.EVENT_TITLE}文字以内で入力してください`
       ),
     description: optionalPreEventText(VALIDATION_LIMITS.DESCRIPTION, '説明'),
+    hashtags: hashtagsSchema,
     location: optionalPreEventText(VALIDATION_LIMITS.LOCATION, '場所'),
     fee: optionalPreEventText(VALIDATION_LIMITS.FEE, '参加費'),
     terms: optionalPreEventText(VALIDATION_LIMITS.TERMS, '参加規約'),
@@ -266,6 +267,7 @@ export const preEventPayloadSchema = z.object({
       `タイトルは${VALIDATION_LIMITS.EVENT_TITLE}文字以内で入力してください`
     ),
   description: payloadText(VALIDATION_LIMITS.DESCRIPTION, '説明'),
+  hashtags: hashtagsSchema,
   location: payloadText(VALIDATION_LIMITS.LOCATION, '場所'),
   fee: payloadText(VALIDATION_LIMITS.FEE, '参加費'),
   terms: payloadText(VALIDATION_LIMITS.TERMS, '参加規約'),

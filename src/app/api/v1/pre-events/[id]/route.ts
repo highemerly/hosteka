@@ -1,5 +1,6 @@
 
 import { isAllowedPreEventTermsChange } from '@/lib/event-terms'
+import { hashtagsToColumn } from '@/lib/hashtags'
 import { canChangeOrganization } from '@/lib/status-transition'
 import { checkPreEventOrganizerPermission, checkPreEventOwnerPermission } from '@/lib/permissions'
 import { defineRoute } from '@/server/http/define-route'
@@ -97,6 +98,7 @@ export const PUT = defineRoute({
         // ここから下は、何が変わったかを数えるために読む
         title: true,
         description: true,
+        hashtags: true,
         location: true,
         fee: true,
         relatedUrl: true,
@@ -130,6 +132,7 @@ export const PUT = defineRoute({
     const {
       title,
       description,
+      hashtags,
       location,
       fee,
       relatedUrl,
@@ -277,6 +280,7 @@ export const PUT = defineRoute({
       {
         title: preEvent.title,
         description: preEvent.description,
+        hashtags: preEvent.hashtags,
         location: preEvent.location,
         fee: preEvent.fee,
         relatedUrl: preEvent.relatedUrl,
@@ -302,6 +306,7 @@ export const PUT = defineRoute({
       {
         title: title.trim(),
         description: description?.trim() || null,
+        hashtags: hashtagsToColumn(hashtags),
         location: location?.trim() || null,
         fee: fee?.trim() || null,
         relatedUrl: relatedUrl?.trim() || null,
@@ -328,6 +333,7 @@ export const PUT = defineRoute({
       data: {
         title: title.trim(),
         description: description?.trim() || null,
+        hashtags: hashtagsToColumn(hashtags),
         location: location?.trim() || null,
         fee: fee?.trim() || null,
         relatedUrl: relatedUrl?.trim() || null,

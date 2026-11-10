@@ -2,6 +2,7 @@ import 'server-only'
 
 import { serializeUser, type PublicUserDto } from './user'
 import { parseAllowedServers, type AllowedServer } from '@/lib/allowed-servers'
+import { hashtagsFromColumn } from '@/lib/hashtags'
 import { canChangeOrganization } from '@/lib/status-transition'
 import { extractServerNamesFromAllowedServers } from '@/lib/participation-utils'
 import { selectAutoRegistrants } from '@/lib/pre-event-promotion'
@@ -83,6 +84,7 @@ export type PreEventDetailDto = {
   id: string
   title: string
   description: string | null
+  hashtags: string[]
   location: string | null
   fee: string | null
   relatedUrl: string | null
@@ -130,6 +132,7 @@ type PreEventRow = {
   id: string
   title: string
   description: string | null
+  hashtags: string | null
   location: string | null
   fee: string | null
   relatedUrl: string | null
@@ -276,6 +279,7 @@ export function serializePreEventDetail(
     id: preEvent.id,
     title: preEvent.title,
     description: preEvent.description,
+    hashtags: hashtagsFromColumn(preEvent.hashtags),
     location: preEvent.location,
     fee: preEvent.fee,
     relatedUrl: preEvent.relatedUrl,
@@ -320,6 +324,7 @@ export function serializePreEventDetail(
 export type PreEventListItemDto = {
   id: string
   title: string
+  hashtags: string[]
   /** 候補日。表示順。カードは先頭しか使わないが、件数を出すため全部返す */
   dateOptions: { id: string; startDate: string; endDate: string | null }[]
   location: string | null
@@ -339,6 +344,7 @@ export const PRE_EVENT_LIST_AVATAR_LIMIT = 5
 type PreEventListSource = {
   id: string
   title: string
+  hashtags: string | null
   location: string | null
   fee: string | null
   registrationDeadline: Date | null
@@ -366,6 +372,7 @@ export function serializePreEventListItem(preEvent: PreEventListSource): PreEven
   return {
     id: preEvent.id,
     title: preEvent.title,
+    hashtags: hashtagsFromColumn(preEvent.hashtags),
     dateOptions: preEvent.dateOptions.map((o) => ({
       id: o.id,
       startDate: o.startDate.toISOString(),

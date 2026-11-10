@@ -34,6 +34,7 @@ const FULL: PreEventDetailDto = {
   id: 'pre_1',
   title: '忘年会の日程',
   description: '## 今年もやります\n- 2時間ほど',
+  hashtags: ['忘年会', '東京'],
   location: '東京都千代田区千代田1-1',
   fee: '3,000円（学生 1,500円）',
   relatedUrl: 'https://example.com/bounenkai',
@@ -229,6 +230,7 @@ type Classification =
 const CLASSIFY: Record<keyof PreEventDetailDto, Classification> = {
   title: { carried: true },
   description: { carried: true },
+  hashtags: { carried: true },
   location: { carried: true },
   fee: { carried: true },
   terms: { carried: true },

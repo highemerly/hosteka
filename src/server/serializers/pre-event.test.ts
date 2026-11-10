@@ -18,6 +18,7 @@ const ROW = {
   id: 'pre_1',
   title: '日程を決める',
   description: null,
+  hashtags: null,
   location: null,
   fee: null,
   relatedUrl: null,

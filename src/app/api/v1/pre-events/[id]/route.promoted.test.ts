@@ -47,6 +47,7 @@ const ROW = {
 
 const PAYLOAD = {
   title: '忘年会の日程',
+  hashtags: [],
   dateOptions: [{ startDate: '2026-12-12T10:00:00.000Z', endDate: null }],
   registrationDeadline: null,
   isAllowedForFediverse: true,

@@ -16,6 +16,7 @@ import { ConditionLink } from '@/components/event/ConditionLink'
 import { EventInfoRow, UserAvatar } from '@/components/event/EventInfoRow'
 import { PlatformCondition } from '@/components/event/PlatformCondition'
 import { ShareBar } from '@/components/event/ShareBar'
+import { Tag } from '@/components/event/Tag'
 import { buildAnypostContactUrl } from '@/components/event/share-targets'
 import {
   ContactAction,
@@ -151,6 +152,18 @@ export function PreEventDetailView({
           </Button>
         ) : null}
       </div>
+
+      {/*
+        **リンクにしない。** タグで引く画面（`/events/hashtag/…`）はイベントしか
+        出さないので、押しても今見ている日程調整は出てこない
+      */}
+      {preEvent.hashtags.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {preEvent.hashtags.map((tag) => (
+            <Tag key={tag}>#{tag}</Tag>
+          ))}
+        </div>
+      ) : null}
 
       {/* 詳細を読む前に回答を決められる人を待たせない。
           幹事には回答者用の操作と幹事メニューが2つ並ぶ。

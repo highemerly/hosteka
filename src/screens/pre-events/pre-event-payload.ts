@@ -54,6 +54,7 @@ function resolveEndDate(option: DateOptionDraft): string | undefined {
 export type PreEventPayload = {
   title: string
   description?: string
+  hashtags: string[]
   location?: string
   fee?: string
   terms?: string
@@ -75,6 +76,7 @@ export function toPreEventPayload(values: PreEventFormOutput): PreEventPayload {
   return {
     title: values.title,
     description: values.description,
+    hashtags: values.hashtags,
     location: values.location,
     fee: values.fee,
     terms: values.terms,

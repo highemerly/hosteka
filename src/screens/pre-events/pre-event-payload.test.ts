@@ -6,6 +6,7 @@ import type { PreEventFormOutput } from '@/schemas/pre-event'
 const base: PreEventFormOutput = {
   title: '忘年会の日程',
   description: undefined,
+  hashtags: [],
   location: undefined,
   fee: undefined,
   terms: undefined,
