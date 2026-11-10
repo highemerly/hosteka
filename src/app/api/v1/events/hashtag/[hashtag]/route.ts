@@ -3,23 +3,18 @@ import { z } from 'zod'
 import { defineRoute } from '@/server/http/define-route'
 import { makeMeta, okList } from '@/server/http/response'
 import { prisma } from '@/lib/prisma'
-import {
-  endedCondition,
-  EVENT_LIST_SELECT,
-  PUBLIC_EVENT_CONDITIONS,
-} from '@/server/queries/event-list'
+import { hashtagParam } from '@/schemas/hashtag'
+import { EVENT_LIST_SELECT } from '@/server/queries/event-list'
+import { hashtagEventWhere } from '@/server/queries/hashtag'
 import { serializeEventListItem } from '@/server/serializers/event'
 
 /**
- * ハッシュタグ別のイベント一覧。
- *
- * hashtags は JSON 文字列のカラムなので `contains: '"タグ"'` で引く。
- * **引用符を含めるのが肝。** 素の `contains: 'LT'` では `LT大会` にも
- * 当たってしまい、別のタグのイベントが混ざる。
+ * ハッシュタグ別のイベント一覧（`/hashtags/[tag]` の「開催予定」「終了」）。
+ * 条件は `server/queries/hashtag.ts`。
  */
 export const GET = defineRoute({
   auth: 'none',
-  params: z.object({ hashtag: z.string().min(1).max(100) }),
+  params: hashtagParam,
   query: z.object({
     /** 開催予定か終了済みか。既定は開催予定 */
     scope: z.enum(['upcoming', 'past']).optional().default('upcoming'),
@@ -31,13 +26,7 @@ export const GET = defineRoute({
     const now = new Date()
     const past = query.scope === 'past'
 
-    const where = {
-      AND: [
-        ...PUBLIC_EVENT_CONDITIONS,
-        { hashtags: { contains: `"${tag}"` } },
-        endedCondition(past, now),
-      ],
-    }
+    const where = hashtagEventWhere(tag, past, now)
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({

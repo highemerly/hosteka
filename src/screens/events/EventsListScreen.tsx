@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventCard } from '@/components/event/EventCard'
 import { useEventSections } from '@/lib/api/queries/events'
+import { hashtagPath } from '@/lib/hashtags'
 import type { EventListItemDto } from '@/server/serializers/event'
 
 function SectionSkeleton() {
@@ -78,7 +79,7 @@ export default function EventsListScreen() {
   const submitHashtag = (event: React.FormEvent) => {
     event.preventDefault()
     const tag = hashtag.trim().replace(/^#/, '')
-    if (tag) router.push(`/events/hashtag/${encodeURIComponent(tag)}`)
+    if (tag) router.push(hashtagPath(tag))
   }
 
   const isEmpty =

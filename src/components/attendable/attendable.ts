@@ -1,3 +1,4 @@
+import { hashtagPath } from '@/lib/hashtags'
 import type { EventListItemDto } from '@/server/serializers/event'
 import type { PreEventListItemDto } from '@/server/serializers/pre-event'
 
@@ -39,7 +40,7 @@ export type Attendable = {
   location: string | null
   /** ハッシュタグ */
   tags: string[]
-  /** タグを押した先。無ければリンクにしない */
+  /** タグを押した先。無ければリンクにしない（プレビューなど） */
   tagHref?: (tag: string) => string
   people: {
     count: number
@@ -74,7 +75,7 @@ export function toEventAttendable(event: EventListItemDto): Attendable {
     },
     location: event.location,
     tags: event.hashtags,
-    tagHref: (tag) => `/events/hashtag/${encodeURIComponent(tag)}`,
+    tagHref: hashtagPath,
     people: {
       count: event.attendingCount,
       capacity: event.maxParticipants,
@@ -94,11 +95,8 @@ export function toPreEventAttendable(preEvent: PreEventListItemDto): Attendable 
     href: `/pre-events/${preEvent.id}`,
     schedule: { kind: 'candidates', options: preEvent.dateOptions },
     location: preEvent.location,
-    /*
-      **リンクにしない。** タグで引く画面（`/events/hashtag/…`）はイベントしか
-      出さないので、押しても今見ている日程調整は出てこない
-    */
     tags: preEvent.hashtags,
+    tagHref: hashtagPath,
     people: {
       count: preEvent.respondentCount,
       // 日程調整に定員は無い。**回答が集まるほど良い**ので分母を出さない

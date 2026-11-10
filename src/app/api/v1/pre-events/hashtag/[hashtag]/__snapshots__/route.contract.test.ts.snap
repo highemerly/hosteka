@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /api/v1/pre-events/hashtag/[hashtag] > 一覧とページ情報を返す 1`] = `
+{
+  "body": {
+    "data": [
+      {
+        "creator": {
+          "avatar": null,
+          "displayName": "テスト太郎",
+          "id": "user_1",
+          "platform": "mastodon",
+          "server": "example.social",
+          "username": "taro",
+        },
+        "dateOptions": [
+          {
+            "endDate": null,
+            "id": "opt_1",
+            "startDate": "2026-12-01T10:00:00.000Z",
+          },
+        ],
+        "fee": null,
+        "hashtags": [
+          "ボドゲ",
+          "hosteka",
+        ],
+        "id": "pre_1",
+        "location": null,
+        "organization": null,
+        "registrationDeadline": null,
+        "respondentCount": 0,
+        "respondents": [],
+        "title": "次のボドゲ会",
+      },
+    ],
+    "meta": {
+      "page": 1,
+      "perPage": 12,
+      "total": 1,
+      "totalPages": 1,
+    },
+  },
+  "contentType": "application/json",
+  "status": 200,
+}
+`;

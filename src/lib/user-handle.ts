@@ -39,7 +39,7 @@ export function parseUserHandle(raw: string): UserHandle | null {
   /*
     **符号化されていても受ける。** `@` は予約文字ではないので素のまま
     来ることが多いが、`%40` で来ることもある。`%` を含まない文字列は
-    decode してもそのまま返る（`src/app/events/hashtag/[hashtag]/page.tsx`
+    decode してもそのまま返る（`src/app/hashtags/[hashtag]/page.tsx`
     が同じ理由で無条件に decode している）。壊れた符号化で投げるので包む。
   */
   let decoded: string

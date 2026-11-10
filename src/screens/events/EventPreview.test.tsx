@@ -143,7 +143,7 @@ describe('EventPreview', () => {
   it('ハッシュタグをリンクにしない', () => {
     const { container } = setup()
     expect(screen.getByText('#fediverse').tagName).not.toBe('A')
-    expect(container.querySelector('a[href*="/events/hashtag/"]')).toBeNull()
+    expect(container.querySelector('a[href*="/hashtags/"]')).toBeNull()
   })
 
   it('カレンダー追加と地図を押せなくする', () => {

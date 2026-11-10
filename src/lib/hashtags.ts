@@ -20,3 +20,8 @@ export function hashtagsFromColumn(value: string | null): string[] {
     return []
   }
 }
+
+/** タグのページ。イベントと日程調整の両方を出す（`app/hashtags/[hashtag]`） */
+export function hashtagPath(tag: string): string {
+  return `/hashtags/${encodeURIComponent(tag)}`
+}

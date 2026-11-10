@@ -4066,6 +4066,44 @@
         ]
       }
     },
+    "/api/v1/hashtags/{hashtag}": {
+      "get": {
+        "x-auth": "none",
+        "parameters": [
+          {
+            "name": "hashtag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。単体は `{ data }`、一覧は `{ data, meta }`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/VALIDATION_ERROR"
+          },
+          "500": {
+            "$ref": "#/components/responses/INTERNAL"
+          },
+          "503": {
+            "$ref": "#/components/responses/SERVICE_UNAVAILABLE"
+          }
+        }
+      }
+    },
     "/api/v1/home": {
       "get": {
         "x-auth": "none",
@@ -5201,6 +5239,66 @@
             "sessionCookie": []
           }
         ]
+      }
+    },
+    "/api/v1/pre-events/hashtag/{hashtag}": {
+      "get": {
+        "x-auth": "none",
+        "parameters": [
+          {
+            "name": "hashtag",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 48
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功。単体は `{ data }`、一覧は `{ data, meta }`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/VALIDATION_ERROR"
+          },
+          "500": {
+            "$ref": "#/components/responses/INTERNAL"
+          },
+          "503": {
+            "$ref": "#/components/responses/SERVICE_UNAVAILABLE"
+          }
+        }
       }
     },
     "/api/v1/pre-events/mine": {

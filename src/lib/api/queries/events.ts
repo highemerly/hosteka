@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/lib/api/client'
+import type { HashtagScope } from '@/schemas/hashtag'
 import type { EventSectionsDto } from '@/app/api/v1/events/sections/route'
 import type {
   EventFormOutput,
@@ -87,16 +88,22 @@ export function useUpdateEvent(id: string) {
   })
 }
 
-export type HashtagScope = 'upcoming' | 'past'
+/** ハッシュタグのページの、イベントを出す切り替え */
+export type HashtagEventScope = Exclude<HashtagScope, 'pre-events'>
 
-/** ハッシュタグ別の一覧。タブとページで引数が変わる */
+/**
+ * ハッシュタグ別のイベント一覧。タブとページで引数が変わる。
+ * `enabled` が偽なら引かない（「日程調整中」を開いているとき）
+ */
 export function useHashtagEvents(
   tag: string,
-  scope: HashtagScope,
+  scope: HashtagEventScope,
   page: number,
-  perPage: number
+  perPage: number,
+  enabled = true
 ) {
   return useQuery({
+    enabled,
     queryKey: eventKeys.hashtag(tag, scope, page, perPage),
     queryFn: () =>
       api.list<EventListItemDto>(

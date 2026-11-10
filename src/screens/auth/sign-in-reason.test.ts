@@ -19,6 +19,7 @@ describe('ログインが要る理由', () => {
 
   it('ハッシュタグ一覧では何も言わない', () => {
     expect(signInReason('/events/hashtag/温泉')).toBeNull()
+    expect(signInReason('/hashtags/温泉')).toBeNull()
   })
 
   it('クエリ文字列が付いていても引ける', () => {

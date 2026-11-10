@@ -77,7 +77,7 @@ describe('toEventAttendable', () => {
 
   it('ハッシュタグの行き先を持つ', () => {
     expect(toEventAttendable(EVENT).tagHref?.('日本語 タグ')).toBe(
-      '/events/hashtag/%E6%97%A5%E6%9C%AC%E8%AA%9E%20%E3%82%BF%E3%82%B0'
+      '/hashtags/%E6%97%A5%E6%9C%AC%E8%AA%9E%20%E3%82%BF%E3%82%B0'
     )
   })
 })
@@ -98,10 +98,10 @@ describe('toPreEventAttendable', () => {
     })
   })
 
-  it('ハッシュタグは出すが、リンクにしない（タグで引く画面はイベントしか出さない）', () => {
+  it('ハッシュタグはイベントと同じタグのページへ', () => {
     const item = toPreEventAttendable(PRE_EVENT)
     expect(item.tags).toEqual(['ボドゲ'])
-    expect(item.tagHref).toBeUndefined()
+    expect(item.tagHref?.('ボドゲ')).toBe('/hashtags/%E3%83%9C%E3%83%89%E3%82%B2')
   })
 })
 

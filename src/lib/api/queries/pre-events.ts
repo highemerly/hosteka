@@ -24,6 +24,22 @@ export const preEventKeys = {
   detail: (id: string) => ['pre-events', 'detail', id] as const,
   sections: () => ['pre-events', 'sections'] as const,
   mine: (params: MyPreEventsParams) => ['pre-events', 'mine', params] as const,
+  hashtag: (tag: string, page: number, perPage: number) =>
+    ['pre-events', 'hashtag', tag, page, perPage] as const,
+}
+
+/** ハッシュタグ別の日程調整一覧（受付中のものだけ）。`enabled` が偽なら引かない */
+export function useHashtagPreEvents(tag: string, page: number, perPage: number, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: preEventKeys.hashtag(tag, page, perPage),
+    queryFn: () =>
+      api.list<PreEventListItemDto>(
+        `/api/v1/pre-events/hashtag/${encodeURIComponent(tag)}?page=${page}&perPage=${perPage}`
+      ),
+    // ページを切り替えたときに一瞬空へ落とさない
+    placeholderData: (prev) => prev,
+  })
 }
 
 export type MyPreEventsParams = Pick<MyPreEventsQuery, 'role' | 'scope' | 'page' | 'perPage'>

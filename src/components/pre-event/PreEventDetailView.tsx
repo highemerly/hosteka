@@ -26,6 +26,7 @@ import {
   Space,
 } from '@/components/attendable/DetailParts'
 import { resolveLocation } from '@/components/event/location'
+import { hashtagPath } from '@/lib/hashtags'
 import { formatJstDateTime } from '@/lib/jst'
 
 import { DateOptionList } from './DateOptionList'
@@ -153,14 +154,12 @@ export function PreEventDetailView({
         ) : null}
       </div>
 
-      {/*
-        **リンクにしない。** タグで引く画面（`/events/hashtag/…`）はイベントしか
-        出さないので、押しても今見ている日程調整は出てこない
-      */}
       {preEvent.hashtags.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {preEvent.hashtags.map((tag) => (
-            <Tag key={tag}>#{tag}</Tag>
+            <Tag key={tag} href={hashtagPath(tag)}>
+              #{tag}
+            </Tag>
           ))}
         </div>
       ) : null}
