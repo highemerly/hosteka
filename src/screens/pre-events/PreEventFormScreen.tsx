@@ -630,7 +630,7 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
             行き先がある（`focusField`）。
           */}
           <Field
-            label="参加規約"
+            label="参加規約への同意"
             htmlFor="terms"
             // 書き方の解説は、書ける欄が出ているときだけ
             aside={withTerms && !termsLocked ? <MarkdownHint /> : undefined}
@@ -645,7 +645,9 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
                 ? withTerms
                   ? '回答した人がいるので、内容は変更できません。削除はできます。'
                   : '回答した人がいるので設定できません。'
-                : '設定すると、回答の前に同意を求めます。回答した人ができたあとは、内容を変更できません。'
+                : withTerms
+                  ? '回答時に同意が必須となります（一人でも同意した後は編集できません）。'
+                  : '設定すると、回答時に同意が必須となります。'
             }
           >
             {!withTerms ? (
