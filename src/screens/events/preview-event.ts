@@ -1,4 +1,5 @@
 import { FEDIVERSE_PLATFORM_ORDER, type FediversePlatform } from '@/lib/allowed-servers'
+import { DEADLINE_DEFAULT_TIME } from '@/lib/event-datetime'
 import type { Viewer } from '@/lib/viewer'
 import type { EventFormOutput } from '@/schemas/event'
 import type { EventDetailDto } from '@/server/serializers/event'
@@ -119,7 +120,7 @@ export function buildPreviewEvent({
     registrationDeadline: values.registrationDeadlineDate
       ? jstInstant(
           values.registrationDeadlineDate,
-          values.registrationDeadlineTime || '23:59'
+          values.registrationDeadlineTime || DEADLINE_DEFAULT_TIME
         )
       : null,
 

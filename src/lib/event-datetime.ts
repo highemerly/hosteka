@@ -81,13 +81,20 @@ export function eventEndAt(event: {
 }
 
 /**
+ * 締切の時刻を入れなかったときの時刻。**その日いっぱい受け付ける。**
+ * イベントと日程調整の両方がこれを使う（日程調整は 0:00 だったので、
+ * 日付だけ入れるとその日になった瞬間に締め切られていた）。
+ */
+export const DEADLINE_DEFAULT_TIME = '23:59'
+
+/**
  * 締切日と締切時刻を1つの瞬間にまとめる。
- * 時刻未設定なら 23:59 とみなす。**JST 固定**。
+ * 時刻未設定なら `DEADLINE_DEFAULT_TIME` とみなす。**JST 固定**。
  * サーバーのタイムゾーンに依存させると、日本時間の23:59でない時刻に締め切られる。
  */
 export function eventDeadlineAt(date: Date | null, time: string | null): Date | null {
   if (!date) return null
-  return new Date(`${jstDay(date)}T${safeTime(time) ?? '23:59'}:00+09:00`)
+  return new Date(`${jstDay(date)}T${safeTime(time) ?? DEADLINE_DEFAULT_TIME}:00+09:00`)
 }
 
 /** `eventDeadlineAt` の ISO 文字列版。DTO に載せる形 */

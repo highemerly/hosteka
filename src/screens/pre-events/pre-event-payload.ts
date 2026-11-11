@@ -1,5 +1,6 @@
 import { addDays } from '@/components/attendable/fields/date-grid'
 import type { DateOptionDraft } from '@/components/attendable/fields/date-option'
+import { DEADLINE_DEFAULT_TIME } from '@/lib/event-datetime'
 import type { PreEventFormOutput } from '@/schemas/pre-event'
 
 /**
@@ -93,8 +94,12 @@ export function toPreEventPayload(values: PreEventFormOutput): PreEventPayload {
         endDate: endDate ? composeJst(endDate, option.endTime) : null,
       }
     }),
+    // 時刻が無ければその日いっぱい（イベントと同じ。候補日の 00:00 とは違う）
     registrationDeadline: values.registrationDeadlineDate
-      ? composeJst(values.registrationDeadlineDate, values.registrationDeadlineTime)
+      ? composeJst(
+          values.registrationDeadlineDate,
+          values.registrationDeadlineTime || DEADLINE_DEFAULT_TIME
+        )
       : null,
     isAllowedForFediverse: values.isAllowedForFediverse,
     isAllowedForDiscord: values.isAllowedForDiscord,
