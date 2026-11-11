@@ -5,7 +5,7 @@ import type { OptionResponseType } from '@/schemas/event'
 import { parseAllowedServers, type AllowedServer } from '@/lib/allowed-servers'
 import { hashtagsFromColumn } from '@/lib/hashtags'
 import { canChangeOrganization } from '@/lib/status-transition'
-import { composeDateTime, composeDeadline } from '@/lib/event-datetime'
+import { composeDateTime, composeDeadline, hasDeadlineTime } from '@/lib/event-datetime'
 
 /**
  * イベント詳細のDTO。
@@ -108,6 +108,12 @@ export type EventDetailDto = {
   maxParticipants: number | null
   /** 日付と時刻を合成した締切。JST。未設定なら null */
   registrationDeadline: string | null
+  /**
+   * 締切の時刻を指定したか。**指定していなければ 23:59**（`DEADLINE_DEFAULT_TIME`）。
+   * 編集画面が時刻の欄を出すかどうかに使う。合成済みの締切からは
+   * 「23:59 を指定した」と区別できない
+   */
+  hasRegistrationDeadlineTime: boolean
   allowMaybe: boolean
   allowParticipationRequest: boolean
   allowedServers: AllowedServer[]
@@ -353,6 +359,7 @@ export function serializeEventDetail(
       event.registrationDeadlineDate,
       event.registrationDeadlineTime
     ),
+    hasRegistrationDeadlineTime: hasDeadlineTime(event.registrationDeadlineTime),
     allowMaybe: event.allowMaybe,
     allowParticipationRequest: event.allowParticipationRequest,
     allowedServers: parseAllowedServers(event.allowedFediverseServers),

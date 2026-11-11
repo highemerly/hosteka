@@ -84,9 +84,11 @@ export function toEventFormValues(event: EventDetailDto): EventFormValues {
     registrationDeadlineDate: event.registrationDeadline
       ? toDateInput(event.registrationDeadline)
       : '',
-    registrationDeadlineTime: event.registrationDeadline
-      ? toTimeInput(event.registrationDeadline)
-      : '',
+    // 開始時刻と同じく印を見る。見ないと、時刻なしの締切に 23:59 が入る
+    registrationDeadlineTime:
+      event.registrationDeadline && event.hasRegistrationDeadlineTime
+        ? toTimeInput(event.registrationDeadline)
+        : '',
     isAllowedForFediverse: event.isAllowedForFediverse,
     isAllowedForDiscord: event.isAllowedForDiscord,
     isAllowedForTwitter: event.isAllowedForTwitter,

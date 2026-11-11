@@ -123,6 +123,7 @@ export function buildPreviewEvent({
           values.registrationDeadlineTime || DEADLINE_DEFAULT_TIME
         )
       : null,
+    hasRegistrationDeadlineTime: Boolean(values.registrationDeadlineTime),
 
     allowMaybe: values.allowMaybe,
     allowParticipationRequest: values.allowParticipationRequest,

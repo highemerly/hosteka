@@ -60,7 +60,11 @@ import {
   type PlatformDefaults,
 } from '../events/default-platforms'
 import { flattenDateOptionErrors } from './date-option-errors'
-import { EMPTY_PRE_EVENT_FORM, toPreEventFormValues } from './pre-event-form-values'
+import {
+  deadlineTimeInput,
+  EMPTY_PRE_EVENT_FORM,
+  toPreEventFormValues,
+} from './pre-event-form-values'
 import { toDateOptionDraft, toPreEventPayload } from './pre-event-payload'
 import { LockedOrganizationField } from '@/components/attendable/fields/LockedOrganizationField'
 
@@ -234,11 +238,14 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
     （イベント側の `withTerms` と同じ）。
   */
   const [withTerms, setWithTerms] = React.useState(false)
+  // 締切の時刻の欄。既定は日付だけ（その日の 23:59 まで。`deadlineTimeInput`）
+  const [withDeadlineTime, setWithDeadlineTime] = React.useState(false)
   // 読み込んだら合わせる。**effect にしない**（`byOrg` と同じ形）
   const [shownFor, setShownFor] = React.useState<typeof existing>(undefined)
   if (existing && existing !== shownFor) {
     setShownFor(existing)
     setWithTerms(Boolean(existing.terms))
+    setWithDeadlineTime(Boolean(deadlineTimeInput(existing.registrationDeadline)))
   }
 
   /*
@@ -316,7 +323,6 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
 
   // 締切の消しボタンは、入っているときだけ出す
   const deadlineDate = useWatch({ control, name: 'registrationDeadlineDate' })
-  const deadlineTime = useWatch({ control, name: 'registrationDeadlineTime' })
 
   /** グループ名義を選んでいるか。選んでいれば、その場で注意を出す */
   const organizationId = useWatch({ control, name: 'organizationId' })
@@ -580,23 +586,30 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
                   errors.registrationDeadlineDate?.message
                 )}
               />
-              <Input
-                type="time"
-                className="w-auto"
-                {...register('registrationDeadlineTime')}
-                aria-label="締切時刻"
-              />
-              {/* ブラウザの日付欄は一度入れた値を自力で空にできない
-                  （イベント側と同じ。`EventFormScreen` の説明を参照） */}
-              {deadlineDate || deadlineTime ? (
+              {withDeadlineTime ? (
+                <Input
+                  type="time"
+                  className="w-auto"
+                  {...register('registrationDeadlineTime')}
+                  aria-label="締切時刻"
+                />
+              ) : null}
+              {/* ブラウザの日付欄は一度入れた値を自力で空にできない。
+                  時刻 → 締切の順に外す（イベント側と同じ。`EventFormScreen` の説明を参照） */}
+              {withDeadlineTime || deadlineDate ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="回答締切を消す"
-                  title="回答締切を消す"
+                  aria-label={withDeadlineTime ? '締切時刻の指定をやめる' : '回答締切を消す'}
+                  title={withDeadlineTime ? '締切時刻の指定をやめる' : '回答締切を消す'}
                   className="text-muted-foreground hover:text-destructive"
                   onClick={() => {
+                    if (withDeadlineTime) {
+                      setWithDeadlineTime(false)
+                      setValue('registrationDeadlineTime', '', { shouldDirty: true })
+                      return
+                    }
                     setValue('registrationDeadlineDate', '', { shouldDirty: true })
                     setValue('registrationDeadlineTime', '', { shouldDirty: true })
                   }}
@@ -604,6 +617,18 @@ export default function PreEventFormScreen({ preEventId }: { preEventId?: string
                   <X className="size-4" />
                 </Button>
               ) : null}
+              {withDeadlineTime ? null : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary"
+                  onClick={() => setWithDeadlineTime(true)}
+                >
+                  <Plus className="size-4" />
+                  時刻を指定
+                </Button>
+              )}
             </div>
           </Field>
 
