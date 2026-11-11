@@ -279,11 +279,16 @@ export default function EventFormScreen({
   const [withTime, setWithTime] = React.useState(false)
   const [withEndDate, setWithEndDate] = React.useState(false)
   const [withTerms, setWithTerms] = React.useState(false)
+  // 締切も既定は日付だけ（その日の 23:59 まで）
+  const [withDeadlineTime, setWithDeadlineTime] = React.useState(false)
   // 読み込んだら合わせる。**effect にしない**（`byOrg` と同じ形）
   const [shownFor, setShownFor] = React.useState<typeof existing>(undefined)
   if (existing && existing !== shownFor) {
     setShownFor(existing)
     setWithTime(existing.hasStartTime)
+    setWithDeadlineTime(
+      Boolean(existing.registrationDeadline && existing.hasRegistrationDeadlineTime)
+    )
     setWithEndDate(Boolean(existing.endDate))
     setWithTerms(Boolean(existing.terms))
   }
@@ -415,7 +420,6 @@ export default function EventFormScreen({
 
   // 締切の消しボタンは、入っているときだけ出す
   const deadlineDate = useWatch({ control, name: 'registrationDeadlineDate' })
-  const deadlineTime = useWatch({ control, name: 'registrationDeadlineTime' })
 
   /*
     参加規約を消す。
@@ -928,27 +932,37 @@ export default function EventFormScreen({
                   errors.registrationDeadlineDate?.message
                 )}
               />
-              <Input
-                type="time"
-                className="w-auto"
-                {...register('registrationDeadlineTime')}
-                aria-label="締切時刻"
-              />
+              {withDeadlineTime ? (
+                <Input
+                  type="time"
+                  className="w-auto"
+                  {...register('registrationDeadlineTime')}
+                  aria-label="締切時刻"
+                />
+              ) : null}
               {/*
                 **消す道を用意する。** ブラウザの日付欄は、一度入れた値を
                 キーボードでしか空にできない（Safari は消せない）。
                 締切は「あとから外す」ことがある設定なので、入れた人が
                 自力で戻せないと、締切のないイベントに戻す手段が無くなる。
+
+                **1つのボタンで、時刻 → 締切の順に外す。** 時刻を出しているときは
+                時刻だけを外す（開始日時の × と同じ）。✕ が2つ並ぶと見分けが付かない。
               */}
-              {deadlineDate || deadlineTime ? (
+              {withDeadlineTime || deadlineDate ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="回答締切を消す"
-                  title="回答締切を消す"
+                  aria-label={withDeadlineTime ? '締切時刻の指定をやめる' : '回答締切を消す'}
+                  title={withDeadlineTime ? '締切時刻の指定をやめる' : '回答締切を消す'}
                   className="text-muted-foreground hover:text-destructive"
                   onClick={() => {
+                    if (withDeadlineTime) {
+                      setWithDeadlineTime(false)
+                      setValue('registrationDeadlineTime', '', { shouldDirty: true })
+                      return
+                    }
                     setValue('registrationDeadlineDate', '', { shouldDirty: true })
                     setValue('registrationDeadlineTime', '', { shouldDirty: true })
                   }}
@@ -956,6 +970,18 @@ export default function EventFormScreen({
                   <X className="size-4" />
                 </Button>
               ) : null}
+              {withDeadlineTime ? null : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary"
+                  onClick={() => setWithDeadlineTime(true)}
+                >
+                  <Plus className="size-4" />
+                  時刻を指定
+                </Button>
+              )}
             </div>
           </Field>
 

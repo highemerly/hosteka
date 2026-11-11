@@ -1,3 +1,4 @@
+import { DEADLINE_DEFAULT_TIME } from '@/lib/event-datetime'
 import type { PreEventDetailDto } from '@/server/serializers/pre-event'
 import type { PreEventFormValues } from '@/schemas/pre-event'
 
@@ -14,6 +15,17 @@ import { toDateOptionDraft, toJstDate, toJstTime } from './pre-event-payload'
  * 対になるのは `toPreEventPayload`。**この2つを通した往復で値が
  * 変わらないこと**を `edit-round-trip.test.ts` が固定している。
  */
+
+/**
+ * 締切の時刻の欄。**23:59 は空にする**（時刻の欄を出さない）。
+ * 日程調整の締切は日時1列で、「時刻を指定しなかった」を持たない。
+ * 空で保存すると 23:59 になる（`toPreEventPayload`）ので、往復しても変わらない。
+ */
+export function deadlineTimeInput(deadline: string | null): string {
+  if (!deadline) return ''
+  const time = toJstTime(deadline)
+  return time === DEADLINE_DEFAULT_TIME ? '' : time
+}
 
 /** フォームの空欄。作成時の初期値でもある */
 export const EMPTY_PRE_EVENT_FORM: PreEventFormValues = {
@@ -55,9 +67,7 @@ export function toPreEventFormValues(preEvent: PreEventDetailDto): PreEventFormV
     registrationDeadlineDate: preEvent.registrationDeadline
       ? toJstDate(preEvent.registrationDeadline)
       : '',
-    registrationDeadlineTime: preEvent.registrationDeadline
-      ? toJstTime(preEvent.registrationDeadline)
-      : '',
+    registrationDeadlineTime: deadlineTimeInput(preEvent.registrationDeadline),
     isAllowedForFediverse: preEvent.isAllowedForFediverse,
     isAllowedForDiscord: preEvent.isAllowedForDiscord,
     isAllowedForTwitter: preEvent.isAllowedForTwitter,

@@ -54,8 +54,9 @@ const FULL: EventDetailDto = {
   isPublic: false,
   isHighlighted: false,
   maxParticipants: 30,
-  // 2026-09-10 23:59 JST
-  registrationDeadline: '2026-09-10T14:59:00.000Z',
+  // 2026-09-10 18:30 JST。23:59 は「時刻なし」と同じ瞬間になるので、見本に使わない
+  registrationDeadline: '2026-09-10T09:30:00.000Z',
+  hasRegistrationDeadlineTime: true,
   allowMaybe: true,
   allowParticipationRequest: false,
   allowedServers: [
@@ -172,6 +173,20 @@ describe('編集画面を開いて保存しただけで値が消えない', () =
     expect(body.endDate).toBeUndefined()
   })
 
+  /*
+    時刻なしの締切に 23:59 を付けない。付けると「時刻を指定した」締切として
+    保存され、開いて保存しただけで締切の変更が全参加者に届く。
+  */
+  it('時刻なしの回答締切に時刻が生えない', () => {
+    const body = reopenAndSave({
+      ...FULL,
+      registrationDeadline: '2026-09-10T14:59:00.000Z',
+      hasRegistrationDeadlineTime: false,
+    })
+    expect(body.registrationDeadlineDate).toBe('2026-09-10')
+    expect(body.registrationDeadlineTime).toBeFalsy()
+  })
+
   it('参加登録の条件が変わらない', () => {
     const body = reopenAndSave(FULL)
     expect(body.maxParticipants).toBe(FULL.maxParticipants)
@@ -236,6 +251,7 @@ const CLASSIFY: Record<keyof EventDetailDto, Classification> = {
   endDate: { carried: true },
   hasStartTime: { carried: true },
   hasEndTime: { carried: true },
+  hasRegistrationDeadlineTime: { carried: true },
   location: { carried: true },
   fee: { carried: true },
   relatedUrl: { carried: true },

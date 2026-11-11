@@ -42,8 +42,8 @@ const FULL: PreEventDetailDto = {
   isPublic: false,
   isHighlighted: false,
   allowAutoRegistration: true,
-  // 2026-12-01 23:59 JST
-  registrationDeadline: '2026-12-01T14:59:00.000Z',
+  // 2026-12-01 18:30 JST。23:59 は「時刻なし」として開くので、見本に使わない
+  registrationDeadline: '2026-12-01T09:30:00.000Z',
   allowedServers: [
     { server: 'handon.club', platform: 'mastodon' },
     { server: 'misskey.io', platform: 'misskey' },
@@ -175,6 +175,22 @@ describe('編集画面を開いて保存しただけで値が消えない', () =
 
   it('回答の締切が分まで変わらない', () => {
     expect(reopenAndSave(FULL).registrationDeadline).toBe(FULL.registrationDeadline)
+  })
+
+  /*
+    23:59 は「時刻なし」として開く（時刻の欄を出さない）。空で保存すると
+    23:59 に戻るので、瞬間は変わらない。
+  */
+  it('23:59 の締切は時刻の欄を空にして開き、保存すると 23:59 に戻る', () => {
+    const dto = { ...FULL, registrationDeadline: '2026-12-01T14:59:00.000Z' }
+    expect(toPreEventFormValues(dto).registrationDeadlineTime).toBe('')
+    expect(reopenAndSave(dto).registrationDeadline).toBe(dto.registrationDeadline)
+  })
+
+  it('0:00 の締切は 0:00 のまま残る', () => {
+    const dto = { ...FULL, registrationDeadline: '2026-11-30T15:00:00.000Z' }
+    expect(toPreEventFormValues(dto).registrationDeadlineTime).toBe('00:00')
+    expect(reopenAndSave(dto).registrationDeadline).toBe(dto.registrationDeadline)
   })
 
   it('回答できる範囲が変わらない', () => {

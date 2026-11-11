@@ -97,6 +97,15 @@ export function eventDeadlineAt(date: Date | null, time: string | null): Date | 
   return new Date(`${jstDay(date)}T${safeTime(time) ?? DEADLINE_DEFAULT_TIME}:00+09:00`)
 }
 
+/**
+ * 締切の時刻を指定したか。`eventDeadlineAt` が時刻列を使うかどうかと同じ判定。
+ * **`has*Time` 列は見ない** — あちらは `00:00` を「指定なし」にするが、
+ * 締切の時刻列は `00:00` のまま保存され、0時に締め切られる。
+ */
+export function hasDeadlineTime(time: string | null): boolean {
+  return safeTime(time) !== null
+}
+
 /** `eventDeadlineAt` の ISO 文字列版。DTO に載せる形 */
 export function composeDeadline(date: Date | null, time: string | null): string | null {
   return eventDeadlineAt(date, time)?.toISOString() ?? null
