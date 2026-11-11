@@ -79,7 +79,7 @@ export function PromotionDateField({
 export function PromotionTermsField({ terms }: { terms: string | null }) {
   if (!terms) {
     return (
-      <Field label="参加規約" htmlFor="terms">
+      <Field label="参加規約への同意" htmlFor="terms">
         <p id="terms" className="text-sm text-muted-foreground">
           日程調整に規約が設定されていなかったため、設定できません
         </p>
@@ -87,7 +87,7 @@ export function PromotionTermsField({ terms }: { terms: string | null }) {
     )
   }
   return (
-    <Field label="参加規約" htmlFor="terms">
+    <Field label="参加規約への同意" htmlFor="terms">
       <div
         id="terms"
         className="rounded-lg border border-border bg-[var(--surface-subtle)] px-3.5 py-3"

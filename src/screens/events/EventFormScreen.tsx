@@ -805,8 +805,8 @@ export default function EventFormScreen({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label="終了日の指定をやめる"
-                      title="終了日の指定をやめる"
+                      aria-label={`${withTime ? '終了日時' : '終了日'}の指定をやめる`}
+                      title={`${withTime ? '終了日時' : '終了日'}の指定をやめる`}
                       className="text-muted-foreground hover:text-foreground"
                       onClick={() => {
                         setWithEndDate(false)
@@ -826,7 +826,7 @@ export default function EventFormScreen({
                     onClick={() => setWithEndDate(true)}
                   >
                     <Plus className="size-4" />
-                    終了日を指定
+                    {withTime ? '終了日時' : '終了日'}を指定
                   </Button>
                 )}
 
@@ -1005,7 +1005,7 @@ export default function EventFormScreen({
             <PromotionTermsField terms={source?.terms ?? null} />
           ) : (
             <Field
-              label="参加規約"
+              label="参加規約への同意"
               htmlFor="terms"
               // 書き方の解説は、書ける欄が出ているときだけ
               aside={withTerms && !termsLocked ? <MarkdownHint /> : undefined}
@@ -1020,7 +1020,9 @@ export default function EventFormScreen({
                   ? withTerms
                     ? '参加登録した人がいるので、内容は変更できません。削除はできます。'
                     : '参加登録した人がいるので設定できません。'
-                  : '設定すると、参加登録の前に同意を求めます。参加登録した人ができたあとは、内容を変更できません。'
+                  : withTerms
+                    ? '参加登録時に同意が必須となります（一人でも同意した後は編集できません）。'
+                    : '設定すると、参加登録時に同意が必須となります。'
               }
             >
               {!withTerms ? (
