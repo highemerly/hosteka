@@ -87,6 +87,24 @@ describe('toPreEventPayload', () => {
     expect(payload.registrationDeadline).toBe('2026-12-01T14:59:00.000Z')
   })
 
+  it('締切の時刻が無ければ、その日の 23:59（JST）にする', () => {
+    const payload = toPreEventPayload({
+      ...base,
+      registrationDeadlineDate: '2026-12-01',
+      registrationDeadlineTime: '',
+    })
+    expect(payload.registrationDeadline).toBe('2026-12-01T14:59:00.000Z')
+  })
+
+  it('締切に 00:00 を指定したら、その日の 0 時にする', () => {
+    const payload = toPreEventPayload({
+      ...base,
+      registrationDeadlineDate: '2026-12-01',
+      registrationDeadlineTime: '00:00',
+    })
+    expect(payload.registrationDeadline).toBe('2026-11-30T15:00:00.000Z')
+  })
+
   it('締切が無ければ null', () => {
     expect(toPreEventPayload(base).registrationDeadline).toBeNull()
   })
