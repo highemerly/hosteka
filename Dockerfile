@@ -3,7 +3,7 @@
 # ============================================
 # Stage 1: 依存関係のインストール
 # ============================================
-FROM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS deps
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS deps
 WORKDIR /app
 
 # libc6-compat は Alpine で一部のnpmパッケージに必要
@@ -34,7 +34,7 @@ RUN npx prisma generate
 # ============================================
 # Stage 3: ビルド
 # ============================================
-FROM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS builder
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS builder
 WORKDIR /app
 
 # 依存関係をコピー
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
 # ============================================
 # Stage 4: 本番実行環境
 # ============================================
-FROM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS runner
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
