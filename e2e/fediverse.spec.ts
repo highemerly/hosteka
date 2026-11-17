@@ -50,6 +50,31 @@ test.describe('ログイン', () => {
     expect(await fakeverse.received({ host: 'mastodon.test', path: '/api/v1/apps' })).toHaveLength(0)
   })
 
+  // コールバックの応答に Referrer-Policy: no-referrer を付けている（next.config.ts）。付けないと、
+  // RUM が戻った先のページを「そのサーバーの投稿から来た人」として数える
+  test('ログインから戻ったページは、相手のサーバーを参照元に持たない', async ({ page }) => {
+    const callbackReferers: (string | undefined)[] = []
+    page.on('request', (r) => {
+      if (r.url().includes('/api/v1/auth/callback/')) callbackReferers.push(r.headers()['referer'])
+    })
+    await loginMastodon(page, `ref${stamp()}`, { referer: 'http://mastodon.test/oauth/authorize' })
+
+    // コールバックには参照元が届いている（消しているのはその先）
+    expect(callbackReferers).toHaveLength(1)
+    expect(callbackReferers[0]).toMatch(/^http:\/\/mastodon\.test\//)
+    expect(new URL(page.url()).pathname).toBe('/dashboard')
+    expect(await page.evaluate(() => document.referrer)).toBe('')
+  })
+
+  // RUM のビーコンはこの属性を読む（src/lib/rum-auth.ts）。HTML は全員で同じなので、ブラウザで付けている
+  test('RUM にログインしているかどうかを <html data-rum-auth> で教える', async ({ page }) => {
+    const rumAuth = () => page.evaluate(() => document.documentElement.getAttribute('data-rum-auth'))
+    await page.goto('/')
+    expect(await rumAuth()).toBe('out')
+    await loginMastodon(page, `rum${stamp()}`)
+    expect(await rumAuth()).toBe('in')
+  })
+
   test('Misskey: MiAuth のセッションを確かめ、トークンでプロフィールを同期する', async ({ page }) => {
     const user = `mika${stamp()}`
     await loginMisskey(page, user)

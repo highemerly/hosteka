@@ -64,7 +64,11 @@ async function expectLoggedIn(page: Page) {
  * Mastodon でログインする。認可画面は通さず、認可 URL の redirect_uri と state から
  * コールバックを直接開く（偽サーバーの token は `e2e-<ユーザー名>` の code を受け付ける）。
  */
-export async function loginMastodon(page: Page, username: string, { write = true } = {}) {
+export async function loginMastodon(
+  page: Page,
+  username: string,
+  { write = true, referer }: { write?: boolean; referer?: string } = {}
+) {
   await page.goto('/')
   const res = await call<{ data: { authUrl: string } }>(page, 'POST', '/api/v1/auth/mastodon/register', {
     server: 'mastodon.test',
@@ -77,7 +81,8 @@ export async function loginMastodon(page: Page, username: string, { write = true
   const callback = new URL(authUrl.searchParams.get('redirect_uri')!)
   callback.searchParams.set('code', `e2e-${username}`)
   callback.searchParams.set('state', authUrl.searchParams.get('state')!)
-  await page.goto(callback.toString())
+  // referer: 認可の画面から戻ってきたときと同じく、相手のサーバーを参照元にして開く
+  await page.goto(callback.toString(), referer ? { referer } : undefined)
   await expectLoggedIn(page)
   return authUrl
 }
