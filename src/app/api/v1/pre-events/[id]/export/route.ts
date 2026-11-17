@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { defineRoute } from '@/server/http/define-route'
 import { ApiError } from '@/server/http/errors'
+import { attachmentDisposition } from '@/server/http/content-disposition'
 import { requirePreEventOrganizer } from '@/server/http/guards'
 import { preEventIdParam } from '@/schemas/pre-event'
 import { prisma } from '@/lib/prisma'
@@ -179,7 +180,7 @@ export const GET = defineRoute({
     return new NextResponse(csvContent, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+        'Content-Disposition': attachmentDisposition(fileName),
       },
     })
   },

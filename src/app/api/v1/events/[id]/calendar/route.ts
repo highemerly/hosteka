@@ -1,5 +1,6 @@
 import { defineRoute } from '@/server/http/define-route'
 import { ApiError } from '@/server/http/errors'
+import { attachmentDisposition } from '@/server/http/content-disposition'
 import { sanitizeDisplayName } from '@/lib/profile-text'
 import { hideDisabledFromNonAdmins } from '@/server/http/guards'
 import { eventIdParam } from '@/schemas/event'
@@ -148,7 +149,7 @@ export const GET = defineRoute({
     return new NextResponse(value, {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(event.title)}.ics"`,
+        'Content-Disposition': attachmentDisposition(`${event.title}.ics`),
       },
     })
   },

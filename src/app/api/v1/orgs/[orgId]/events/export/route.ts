@@ -7,6 +7,7 @@ import { formatJstDateTime } from '@/lib/jst'
 import { defineRoute } from '@/server/http/define-route'
 import { cell } from '@/server/http/csv'
 import { ApiError } from '@/server/http/errors'
+import { attachmentDisposition } from '@/server/http/content-disposition'
 import { requireOrgMember } from '@/server/http/guards'
 import { orgIdParam } from '@/schemas/org'
 
@@ -256,7 +257,7 @@ export const GET = defineRoute({
     return new NextResponse(csvBytes, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(org.name)}_events_${dateTimeStr}.csv"`,
+        'Content-Disposition': attachmentDisposition(`${org.name}_events_${dateTimeStr}.csv`),
       },
     })
   } catch (error) {
