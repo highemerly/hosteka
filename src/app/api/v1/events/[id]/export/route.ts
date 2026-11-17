@@ -1,5 +1,6 @@
 import { defineRoute } from '@/server/http/define-route'
 import { ApiError } from '@/server/http/errors'
+import { attachmentDisposition } from '@/server/http/content-disposition'
 import { requireEventOrganizer } from '@/server/http/guards'
 import { eventIdParam } from '@/schemas/event'
 import { NextResponse } from 'next/server'
@@ -263,7 +264,7 @@ export const GET = defineRoute({
     return new NextResponse(csvBytes, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(event.title)}_participants_${dateTimeStr}.csv"`,
+        'Content-Disposition': attachmentDisposition(`${event.title}_participants_${dateTimeStr}.csv`),
       },
     })
   },
