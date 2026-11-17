@@ -13,6 +13,7 @@ import { defaultOgImages, twitterCard } from "@/lib/og/default";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { RUM_AUTH_INIT_SCRIPT } from "@/lib/rum-auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -97,8 +98,17 @@ export default async function RootLayout({
           最初の描画に間に合わないから。GPC を有効にしたブラウザでは
           beacon.js 自身が何もせずに終わる。
           送るものはプライバシーポリシー「分析ツール」に書いてある。
+
+          その前に、ログインしているかどうかを `<html data-rum-auth>` に書く
+          （`lib/rum-auth.ts`）。同期で走るので、async のビーコンより必ず先に済む。
+          参照元とログイン状態を実際に送るかは、コレクタの設定（features）が決める。
         */}
-        {process.env.NODE_ENV === 'production' && <script async src="/_n-rum/beacon.js" />}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <script dangerouslySetInnerHTML={{ __html: RUM_AUTH_INIT_SCRIPT }} />
+            <script async src="/_n-rum/beacon.js" />
+          </>
+        )}
       </head>
       <body className="antialiased">
         {/*

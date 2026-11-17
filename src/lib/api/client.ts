@@ -1,4 +1,5 @@
 import { COOKIE_SECURE, COOKIE_VIEWER } from '@/lib/cookie-names'
+import { markRumLoggedOut } from '@/lib/rum-auth'
 
 /**
  * /api/v1 を叩くクライアント。
@@ -59,6 +60,8 @@ function clearViewerCookie(): void {
   if (typeof document === 'undefined') return
   // Secure が無いと、本番の `__Host-` 付きの名前では消えない（cookie-names.ts）
   document.cookie = `${COOKIE_VIEWER}=; Path=/; Max-Age=0; SameSite=Lax${COOKIE_SECURE ? '; Secure' : ''}`
+  // ページを読み直さずにログアウト状態になるので、RUM への申告もここで直す
+  markRumLoggedOut()
 }
 
 async function request(path: string, init?: RequestInit): Promise<unknown> {

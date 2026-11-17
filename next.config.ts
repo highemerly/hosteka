@@ -138,6 +138,18 @@ const nextConfig: NextConfig = {
         headers: PRIVATE_NO_STORE,
       },
       /*
+        **ログインから戻ったページに、相手のサーバーを参照元として持たせない。**
+        コールバックは利用者のサーバー（認可の画面）から来て、ページへ
+        リダイレクトする。リダイレクトの応答の Referrer-Policy は行き先の
+        読み込みにも効く（Fetch の「set request's referrer policy on redirect」）ので、
+        ここで消すと、戻った先の `document.referrer` は空になる。
+        消さないと、RUM が「そのサーバーの投稿から来た人」として数える。
+      */
+      {
+        source: '/api/v1/auth/callback/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      /*
         APIエンドポイント。**既定は「キャッシュさせない」。**
 
         ここは `defineRoute` に載っていない9本も含めて全部を覆う最後の網なので、
