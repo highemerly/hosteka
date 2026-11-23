@@ -6,6 +6,10 @@
   timezone: 'Asia/Tokyo',
   // 週2回にまとめる（毎日 PR が来ると確認が追いつかず、週1だと間隔が空きすぎる）。
   schedule: ['before 9am on monday and thursday'],
+  // 時間あたりの上限（既定は1時間に2件）は外す。数は schedule で既に絞っており、App は枠の中で
+  // 数回しか動かないため、1回の枠で作られる PR が少なく、溜まった更新が次の枠へ持ち越される。
+  // 同時に開く数の上限（prConcurrentLimit・既定10）は、CI が壊れたときに PR が溜まり続けないよう残す。
+  prHourlyLimit: 0,
   labels: ['dependencies'],
   // PR を github.com/pulls の「Assigned to you」にまとめる（いくつものリポジトリから来るので見落とさない）
   assignees: ['highemerly'],
@@ -72,9 +76,11 @@
       enabled: false,
     },
     {
-      // マイナー・パッチは CI（unit・lint・型・E2E）が緑なら自動でマージする。
-      // メジャー・digest・lockfile の一括更新は手でマージする。
-      matchUpdateTypes: ['minor', 'patch'],
+      // マイナー・パッチ・digest は CI（unit・lint・型・E2E）が緑なら自動でマージする。
+      // digest（node:24-alpine）は、Dockerfile の変更で E2E が本番と同じイメージをビルドして起動するので、
+      // npm のパッチと同じ程度には確かめられている。
+      // メジャー・lockfile の一括更新は手でマージする（lockfile は間接依存がまとめて動き、除外している依存も含みうるため）。
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
       automerge: true,
     },
     {
