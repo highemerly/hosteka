@@ -59,7 +59,8 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
   したもの（next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・prisma 一式・cookies-next・0.x）と、
   タグ時にしか動かないワークフロー（docker-build.yml・tag-release.yml）。PR に1つでも除外の更新が入っていれば手でマージする。
   自動でマージされる PR は assign されない（「Assigned to you」に残るのは手で見るものだけ）
-- メジャー・`node:24-alpine` の digest・lockfile の一括更新は手でマージする
+- `node:24-alpine` の digest も、CI が緑なら自動でマージされる（Dockerfile の変更では E2E が本番と同じイメージをビルドして走る）。
+  メジャー・lockfile の一括更新は手でマージする
 - **メジャーは承認制。** PR は自動では来ず、Issue「Dependency Dashboard」の Pending Approval に並ぶ
   （見送っている理由: eslint 10 は eslint-config-next が使う eslint-plugin-react が未対応、TypeScript 7 は
   typescript-eslint と next typegen の追従待ち）
@@ -82,7 +83,8 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
    |---|---|---|
    | 型定義・開発ツール | `@types/*`・eslint・typescript・vitest・testing-library・jsdom・@playwright/test | CI 緑ならマージ（マイナー・パッチは自動） |
    | テストが本物を通るもの | jose（JWT）・ics（カレンダー）・zod・react-markdown / rehype-* | CI 緑ならマージ（マイナー・パッチは自動） |
-   | ビルドと表示 | next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query・`node:24-alpine` の digest | E2E 緑で本番ビルド・起動・主要ページまでは確認済み。見た目と操作は手元で |
+   | ベースイメージ | `node:24-alpine` の digest | CI 緑ならマージ（自動）。E2E が本番と同じイメージで起動・主要ページ・ログインと投稿まで通す |
+   | ビルドと表示 | next・react・tailwindcss・radix-ui・lucide-react・@tanstack/react-query | E2E 緑で本番ビルド・起動・主要ページまでは確認済み。見た目と操作は手元で |
    | DB | prisma 一式 | ユニットテストはモック。E2E が空の DB に SQL を当てて API が応答するところまで。書き込みは手元で |
    | 0.x のもの | class-variance-authority・@tailwindcss/typography・server-only | 0.x はマイナーでも互換を崩すことが多いのに Renovate はメジャー扱いしない。変更履歴を読む |
    | ログイン・投稿に関わるもの | cookies-next | E2E 緑で Mastodon / Misskey のログインと投稿までは確認済み。Discord・X は手元で |
@@ -107,7 +109,8 @@ gh api -X PUT repos/highemerly/hosteka/rulesets/<id> --input .github/rulesets/ma
 
 - 今は要らない更新: PR を閉じる（その版は作り直されない。次の版が出れば再び PR になる）。恒久的に止めるなら renovate.json5 にルールを足す
 - セキュリティ修正: Dependabot alerts（リポジトリの設定で有効。Dependabot 自身の PR は無効のまま）に載ったものは、
-  Renovate がスケジュールと公開からの3日待ちを待たずに PR を作る
+  Renovate がスケジュールと公開からの3日待ちを待たずに PR を作る（題名の末尾に `[SECURITY]`）。自動マージの対象かどうかは
+  通常と同じ。**マージしても本番には入らないので、マージしたらパッチ版をリリースする**
 - その他の急ぐ更新: Dashboard の Awaiting Schedule でチェックを入れると、スケジュールを待たずに PR が作られる
 - 手元で `npm update` はしない（Renovate の PR とぶつかる）。依存の追加はブランチを切って PR で
 
