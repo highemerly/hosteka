@@ -37,7 +37,7 @@
     "radix-ui": "^1.6.7",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-hook-form": "^7.89.0",
+    "react-hook-form": "^7.92.0",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
